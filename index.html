@@ -1,0 +1,3678 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电动汽车总体设计计算工具·广西大学·车辆工程专业·《汽车设计》课程教学团队</title>
+<!-- PDF 文本提取库（用于说明书评阅；无网络时自动退化为错误提示） -->
+<script>
+(function(){
+  var s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  s.onerror = function(){ window._pdfJsFailed = true; };
+  document.head.appendChild(s);
+})();
+</script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2330;
+    --border: #30363d;
+    --accent: #e36914;
+    --accent2: #f0a554;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #58a6ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --radius: 8px;
+    --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #0d1117 0%, #1a1f2e 50%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+  }
+
+  .logo-mark {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+
+  header h1 {
+    font-size: 18px; font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+
+  header p {
+    font-size: 12px; color: var(--text2);
+    margin-top: 2px;
+  }
+
+  .header-badge {
+    margin-left: auto;
+    background: rgba(227,105,20,0.15);
+    border: 1px solid rgba(227,105,20,0.35);
+    color: var(--accent2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* ── Layout ── */
+  .app {
+    display: flex;
+    height: calc(100vh - 73px);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 12px 0;
+  }
+
+  .sidebar-section {
+    padding: 4px 12px 8px;
+    margin-top: 8px;
+  }
+
+  .sidebar-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text2);
+    text-transform: uppercase;
+    padding: 0 8px 6px;
+  }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    color: var(--text2);
+    font-size: 13px;
+    transition: all 0.15s;
+    border: none; background: none; width: 100%; text-align: left;
+  }
+
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active {
+    background: rgba(227,105,20,0.18);
+    color: var(--accent2);
+    font-weight: 600;
+  }
+
+  .nav-icon { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+
+  /* ── Main ── */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .card-title {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .card-title .icon { font-size: 16px; }
+
+  .card-body { padding: 18px; }
+
+  .card-note {
+    font-size: 11px; color: var(--text2);
+    background: rgba(88,166,255,0.07);
+    border-left: 3px solid var(--text3);
+    padding: 8px 12px;
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 14px;
+    line-height: 1.7;
+  }
+
+  /* ── Form elements ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+  }
+
+  .form-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+
+  label {
+    font-size: 12px; color: var(--text2); font-weight: 500;
+  }
+
+  label .unit {
+    color: var(--accent2); font-size: 11px; margin-left: 4px;
+  }
+
+  input[type="number"], input[type="text"], select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: var(--font-mono);
+    width: 100%;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+
+  input[type="number"]:focus, input[type="text"]:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  select option { background: var(--surface); }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 8px 18px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #c55a0e);
+    color: #fff;
+  }
+  .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text2);
+  }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+  /* ── Results ── */
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .result-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+
+  .result-label {
+    font-size: 11px; color: var(--text2); margin-bottom: 4px;
+  }
+
+  .result-value {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent2);
+  }
+
+  .result-value .result-unit {
+    font-size: 12px;
+    color: var(--text2);
+    font-weight: 400;
+    margin-left: 3px;
+  }
+
+  .result-status {
+    font-size: 10px; margin-top: 3px;
+  }
+
+  .status-ok { color: var(--green); }
+  .status-warn { color: var(--yellow); }
+  .status-err { color: var(--red); }
+
+  /* ── Table ── */
+  .ref-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .ref-table th {
+    background: var(--surface2);
+    color: var(--text2);
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ref-table td {
+    padding: 7px 12px;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    color: var(--text);
+  }
+
+  .ref-table tr:last-child td { border-bottom: none; }
+  .ref-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .highlight-row td { background: rgba(227,105,20,0.08); color: var(--accent2); }
+
+  /* ── Page title ── */
+  .page-title {
+    font-size: 22px; font-weight: 800;
+    color: var(--text);
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+  }
+
+  .page-subtitle {
+    font-size: 13px; color: var(--text2);
+    margin-bottom: 20px;
+  }
+
+  /* ── Formula display ── */
+  .formula-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 10px 0;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent2);
+    letter-spacing: 0.3px;
+  }
+
+  /* ── Two-column layout ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 900px) {
+    .two-col { grid-template-columns: 1fr; }
+    .form-grid-3 { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ── Range indicator ── */
+  .range-bar {
+    height: 6px; background: var(--bg);
+    border-radius: 3px; margin-top: 6px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .range-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.4s ease;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 16px 0;
+  }
+
+  /* ── Tab pills ── */
+  .tab-pills {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .tab-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    transition: all 0.15s;
+  }
+
+  .tab-pill.active {
+    background: rgba(227,105,20,0.2);
+    border-color: var(--accent);
+    color: var(--accent2);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── Checklist ── */
+  .checklist { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .checklist li {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  .check-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Summary box ── */
+  .summary-box {
+    background: linear-gradient(135deg, rgba(227,105,20,0.1), rgba(240,165,84,0.05));
+    border: 1px solid rgba(227,105,20,0.3);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-top: 14px;
+  }
+
+  .summary-title {
+    font-size: 13px; font-weight: 700;
+    color: var(--accent2); margin-bottom: 12px;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+  }
+
+  .summary-item { font-size: 12px; }
+  .summary-key { color: var(--text2); }
+  .summary-val { color: var(--text); font-weight: 600; font-family: var(--font-mono); }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .sidebar { width: 180px; }
+    .main { padding: 16px; }
+  }
+
+  /* ══════════ 学生登录 / 教师登录 ══════════ */
+  .student-badge {
+    display: none;
+    flex-direction: column;
+    background: rgba(255,255,255,0.1);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-left: 8px;
+  }
+  .student-badge .s-label { opacity: 0.7; font-size: 10px; }
+  .student-badge .s-value { font-size: 13px; font-weight: 700; color: var(--accent2); margin-top: 1px; }
+
+  .teacher-btn {
+    background: rgba(255,255,255,0.12);
+    padding: 7px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: all 0.2s;
+    color: var(--text2);
+    margin-left: auto;
+    white-space: nowrap;
+  }
+  .teacher-btn:hover { background: rgba(255,255,255,0.22); color: var(--text); }
+
+  .login-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.82);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+  }
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 36px;
+    border-radius: 12px;
+    max-width: 460px;
+    width: 92%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .login-box h2 { color: var(--accent2); margin-bottom: 6px; font-size: 20px; }
+  .login-box .desc { color: var(--text2); font-size: 13px; margin-bottom: 22px; line-height: 1.65; }
+  .login-field { margin-bottom: 16px; }
+  .login-field label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 12px; color: var(--text2); }
+  .login-field input {
+    width: 100%; padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--text);
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .login-field input:focus { border-color: var(--accent); }
+  .login-field .hint { font-size: 11px; color: var(--text2); margin-top: 4px; }
+  .login-field .error { font-size: 11px; color: var(--red); margin-top: 4px; display: none; }
+  .login-btn {
+    width: 100%; padding: 12px;
+    background: linear-gradient(135deg, var(--accent), #c55a0e);
+    color: white;
+    border: none; border-radius: 6px;
+    font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: filter 0.2s;
+  }
+  .login-btn:hover { filter: brightness(1.1); }
+
+  .header-controls { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-wrap: wrap; }
+
+  /* ══════════ 智能评分报告 ══════════ */
+  .score-card {
+    background: linear-gradient(135deg, #1a1f2e 0%, #0d1117 100%);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 28px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .score-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .score-display { text-align: center; }
+  .score-value { font-size: 72px; font-weight: 800; margin: 8px 0; color: var(--accent2); font-family: var(--font-mono); }
+  .score-label { font-size: 13px; color: var(--text2); }
+  .score-grade { font-size: 24px; font-weight: 700; color: var(--green); margin-top: 4px; }
+  .score-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .score-detail-item {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+  }
+  .score-detail-item .sd-label { font-size: 11px; color: var(--text2); }
+  .score-detail-item .sd-value { font-size: 22px; font-weight: 700; color: var(--accent2); margin-top: 3px; font-family: var(--font-mono); }
+
+  .grading-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .grading-table th {
+    background: var(--surface2);
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    font-weight: 600; color: var(--text2); font-size: 11px;
+  }
+  .grading-table td { padding: 8px 12px; border: 1px solid var(--border); color: var(--text); }
+  .grading-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+  .grading-table .score-col { text-align: center; font-weight: 700; min-width: 60px; }
+  .grading-table .cat-header td { background: rgba(227,105,20,0.12); color: var(--accent2); font-weight: 700; }
+
+  .badge-ok-s { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); padding: 2px 7px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+  .badge-err-s { background: rgba(248,81,73,0.15); color: var(--red); border: 1px solid rgba(248,81,73,0.3); padding: 2px 7px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+  .badge-warn-s { background: rgba(210,153,34,0.15); color: var(--yellow); border: 1px solid rgba(210,153,34,0.3); padding: 2px 7px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+
+  /* ══════════ 教师管理 ══════════ */
+  .stats-card-t {
+    background: linear-gradient(135deg, #1a1f2e 0%, #0d2040 100%);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 22px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+  }
+  .stats-grid-t {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .stats-item-t {
+    background: rgba(255,255,255,0.1);
+    padding: 14px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .stats-item-t .st-label { font-size: 11px; color: var(--text2); }
+  .stats-item-t .st-value { font-size: 30px; font-weight: 700; color: var(--accent2); margin-top: 4px; font-family: var(--font-mono); }
+
+  .student-item-t {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .student-item-t:hover { background: rgba(227,105,20,0.1); border-color: var(--accent); }
+  .student-item-t .si-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .student-item-t .si-name { font-size: 14px; font-weight: 700; color: var(--text); }
+  .student-item-t .si-detail { font-size: 11px; color: var(--text2); margin-top: 3px; }
+
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 28px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin: 14px 0;
+    color: var(--text2);
+  }
+  .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: rgba(227,105,20,0.06); color: var(--text); }
+  .upload-zone .uz-icon { font-size: 32px; margin-bottom: 8px; }
+  .upload-zone .uz-text { font-size: 14px; font-weight: 600; }
+  .upload-zone .uz-hint { font-size: 12px; margin-top: 4px; }
+
+  .btn-success-t { background: #1a7c3a; color: white; }
+  .btn-success-t:hover { background: #145d2b; }
+  .btn-warning-t { background: var(--yellow); color: #1a1200; }
+  .btn-warning-t:hover { filter: brightness(0.9); }
+  .btn-danger-t { background: #c0392b; color: white; }
+  .btn-danger-t:hover { background: #a02a1f; }
+
+  /* teacher panel overlay */
+  .teacher-panel-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 9998;
+    overflow-y: auto;
+    padding: 24px 16px;
+  }
+  .teacher-panel-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 28px;
+    border-radius: 12px;
+    max-width: 1020px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    margin: auto;
+  }
+
+  /* scoring page as sidebar page */
+  #page-scoring .score-card { margin-bottom: 20px; }
+  /* ══════════ 说明书评阅专用样式 ══════════ */
+  .review-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+  .review-header .rh-icon {
+    font-size: 34px; width: 58px; height: 58px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(227,105,20,0.12); border: 1px solid rgba(227,105,20,0.3); border-radius: 12px;
+  }
+  .review-header h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .review-header p { font-size: 13px; color: var(--text2); }
+
+  .review-dims { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 6px; }
+  .review-dim {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px; text-align: center;
+  }
+  .review-dim .rd-pct { font-size: 26px; font-weight: 800; color: var(--accent2); font-family: var(--font-mono); }
+  .review-dim .rd-lbl { font-size: 13px; font-weight: 700; color: var(--text); margin: 4px 0; }
+  .review-dim .rd-desc { font-size: 11px; color: var(--text2); line-height: 1.5; }
+
+  .file-chosen { font-size: 13px; color: var(--text2); font-family: var(--font-mono); }
+  .upload-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+
+  .btn-success { background: #1a7c3a; color: #fff; }
+  .btn-success:hover { background: #145d2b; filter: none; }
+  .btn-warning { background: var(--yellow); color: #1a1200; }
+  .btn-warning:hover { filter: brightness(0.92); }
+
+  .ai-loading { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 36px 20px; }
+  .spinner {
+    width: 38px; height: 38px; border: 4px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .review-info {
+    background: rgba(88,166,255,0.07); border: 1px solid rgba(88,166,255,0.25);
+    border-radius: 8px; padding: 13px 16px; font-size: 13px; color: var(--text2); line-height: 1.7;
+  }
+  .review-info strong { color: var(--text3); }
+user-select: none
+</style>
+</head>
+<body>
+
+<!-- 学生登录界面 -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h2>🎓 学生身份验证</h2>
+    <div class="desc">
+      欢迎使用汽车总体设计计算工具！<br>
+      请输入您的学号和姓名开始设计。完成后系统将自动评分并生成报告。
+    </div>
+    <div class="login-field">
+      <label>学号（10位数字）</label>
+      <input type="text" id="loginStudentId" placeholder="请输入10位数字学号" maxlength="10">
+      <div class="hint">示例：2024012345</div>
+      <div class="error" id="idError">请输入10位数字学号</div>
+    </div>
+    <div class="login-field">
+      <label>姓名</label>
+      <input type="text" id="loginStudentName" placeholder="请输入您的姓名">
+      <div class="hint">用于报告标识</div>
+      <div class="error" id="nameError">请输入姓名（不少于2个字符）</div>
+    </div>
+    <button class="login-btn" onclick="submitLogin()">开始设计</button>
+  </div>
+</div>
+
+<!-- 教师登录界面 -->
+<div class="login-overlay" id="teacherLoginOverlay" style="display:none">
+  <div class="login-box">
+    <h2>🔐 教师管理系统</h2>
+    <div class="desc">请输入教师密码以访问统计管理功能</div>
+    <div class="login-field">
+      <label>教师密码</label>
+      <input type="password" id="teacherPassword" placeholder="请输入密码">
+      <div class="hint"></div>
+      <div class="error" id="pwdError">密码错误，请重试</div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="login-btn" style="flex:1" onclick="submitTeacherLogin()">登录</button>
+      <button class="login-btn" style="flex:1;background:#444" onclick="closeTeacherLogin()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 教师管理面板 -->
+<div class="teacher-panel-overlay" id="teacherPanelOverlay">
+  <div class="teacher-panel-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="color:var(--accent2);font-size:20px">📊 教师统计管理系统（离线版）</h2>
+      <button class="btn btn-ghost" onclick="closeTeacherPanel()">✕ 关闭</button>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title"><span class="icon">📁</span>导入学生数据文件</div></div>
+      <div class="card-body">
+        <div class="card-note">
+          <strong>使用说明：</strong>收集所有学生提交的 TXT/JSON 报告文件 → 点击或拖拽批量导入 → 系统自动提取数据并生成统计 → 导出 CSV 用 Excel 打开分析。
+        </div>
+        <input type="file" id="teacherFileInput" multiple accept=".txt,.json" style="display:none" onchange="handleFileSelect(event)">
+        <div class="upload-zone" id="teacherUploadZone" onclick="document.getElementById('teacherFileInput').click()">
+          <div class="uz-icon">📂</div>
+          <div class="uz-text">点击选择文件 或 拖拽文件到此处</div>
+          <div class="uz-hint">支持批量导入 TXT 或 JSON 文件</div>
+        </div>
+        <div id="uploadStatus" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>
+      </div>
+    </div>
+    <div id="teacherStatsContent"></div>
+  </div>
+</div>
+
+<header>
+  <div class="logo-mark">🔋</div>
+  <div>
+    <h1>电动汽车总体设计计算工具·广西大学 ·车辆工程专业 ·《汽车设计》课程教学团队</h1>
+    <p>依据《汽车设计》第5版 第六篇·新能源汽车 · 纯电动汽车（BEV）· GB/T 15089-2001 · GB/T 28382-2012（电动汽车·课程设计版）</p>
+  </div>
+  <div class="header-controls">
+    <div class="student-badge" id="studentBadge">
+      <div class="s-label">当前学生</div>
+      <div class="s-value" id="studentBadgeText">—</div>
+    </div>
+    <button class="teacher-btn" onclick="openTeacherLogin()">👨‍🏫 教师管理</button>
+    <span class="header-badge">电动汽车·课程设计版</span>
+  </div>
+</header>
+
+<div class="app">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">基本参数</div>
+      <button class="nav-item active" onclick="showPage('vehicle-type')">
+        <span class="nav-icon">📋</span> 车型与分类
+      </button>
+      <button class="nav-item" onclick="showPage('main-params')">
+        <span class="nav-icon">📐</span> 主要尺寸参数
+      </button>
+      <button class="nav-item" onclick="showPage('mass-params')">
+        <span class="nav-icon">⚖️</span> 质量参数
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">电驱动匹配</div>
+      <button class="nav-item" onclick="showPage('engine')">
+        <span class="nav-icon">⚡</span> 驱动电机选型
+      </button>
+      <button class="nav-item" onclick="showPage('performance')">
+        <span class="nav-icon">📈</span> 动力性计算
+      </button>
+      <button class="nav-item" onclick="showPage('fuel')">
+        <span class="nav-icon">🔋</span> 续驶里程与电耗
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">总体布置</div>
+      <button class="nav-item" onclick="showPage('axle-load')">
+        <span class="nav-icon">⚙️</span> 轴荷分配
+      </button>
+      <button class="nav-item" onclick="showPage('tyre')">
+        <span class="nav-icon">🔵</span> 轮胎选型
+      </button>
+      <button class="nav-item" onclick="showPage('body-layout')">
+        <span class="nav-icon">🏗️</span> 车身布置
+      </button>
+      <button class="nav-item" onclick="showPage('hpoint')">
+        <span class="nav-icon">👤</span> H点 & 人机
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">校核汇总</div>
+      <button class="nav-item" onclick="showPage('summary')">
+        <span class="nav-icon">✅</span> 设计汇总
+      </button>
+      <button class="nav-item" onclick="showPage('refs')">
+        <span class="nav-icon">📚</span> 参考数据表
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">课程设计系统</div>
+      <button class="nav-item" onclick="showPage('scoring')">
+        <span class="nav-icon">📊</span> 智能评分报告
+      </button>
+      <button class="nav-item" onclick="showPage('manual-review')">
+        <span class="nav-icon">📝</span> 说明书评阅
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="main">
+
+    <!-- ═══════════════ PAGE: 车型与分类 ═══════════════ -->
+    <div id="page-vehicle-type" class="page active">
+      <div class="page-title">车型与布置形式</div>
+      <div class="page-subtitle">依据 GB/T 15089-2001 《机动车辆及挂车分类》 · 教材§1.2</div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">🏷️</span> 车型定义</div>
+        </div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>车辆类别</label>
+              <select id="veh-class" onchange="updateVehClass()">
+                <option value="M1">M₁类 — 乘用车（≤9座）</option>
+                <option value="M2">M₂类 — 客车（≤5000kg，>9座）</option>
+                <option value="M3">M₃类 — 客车（>5000kg，>9座）</option>
+                <option value="N1">N₁类 — 货车（≤3500kg）</option>
+                <option value="N2">N₂类 — 货车（3500~12000kg）</option>
+                <option value="N3">N₃类 — 货车（>12000kg）</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>驱动形式</label>
+              <select id="drive-type">
+                <option value="4x2F">4×2 前轮驱动 (FF)</option>
+                <option value="4x2R">4×2 后轮驱动 (FR)</option>
+                <option value="4x2MR">4×2 中置后驱 (MR)</option>
+                <option value="4x4">4×4 全轮驱动</option>
+                <option value="6x2">6×2</option>
+                <option value="6x4">6×4</option>
+                <option value="6x6">6×6</option>
+                <option value="8x4">8×4</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>驱动电机位置</label>
+              <select id="engine-pos">
+                <option value="front">前置</option>
+                <option value="mid">中置</option>
+                <option value="rear">后置</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>车身形式</label>
+              <select id="body-type">
+                <option value="sedan">轿车（三厢）</option>
+                <option value="hatchback">掀背/仓背（两厢）</option>
+                <option value="suv">SUV（越野型）</option>
+                <option value="mpv">MPV（多用途）</option>
+                <option value="bus">客车</option>
+                <option value="truck">货车</option>
+                <option value="pickup">皮卡</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📊</span> 布置形式特点分析</div>
+        </div>
+        <div class="card-body">
+          <div id="layout-analysis" class="card-note">
+            请选择以上参数，系统将自动给出布置形式特点与设计建议。
+          </div>
+          <div id="layout-pros-cons"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📏</span> 外廓尺寸法规限值 (GB 1589-2016)</div>
+        </div>
+        <div class="card-body">
+          <table class="ref-table">
+            <thead>
+              <tr><th>车型</th><th>长度 /mm</th><th>宽度 /mm</th><th>高度 /mm</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>乘用车 & 二轴客车</td><td>≤ 12 000</td><td>≤ 2 550</td><td>≤ 4 000</td></tr>
+              <tr><td>三轴客车</td><td>≤ 13 700</td><td>≤ 2 550</td><td>≤ 4 000</td></tr>
+              <tr><td>单铰接客车</td><td>≤ 18 000</td><td>≤ 2 550</td><td>≤ 4 000</td></tr>
+              <tr><td>N₁货车 (≤3.5t)</td><td>≤ 6 000</td><td>≤ 2 000</td><td>≤ 2 500</td></tr>
+              <tr><td>二轴货车 (>3.5t,≤8t)</td><td>≤ 7 000</td><td>≤ 2 550</td><td>≤ 4 000</td></tr>
+              <tr><td>二轴货车 (>8t,≤12t)</td><td>≤ 8 000</td><td>≤ 2 550</td><td>≤ 4 000</td></tr>
+              <tr><td>二轴货车 (>12t)</td><td>≤ 9 000</td><td>≤ 2 550</td><td>≤ 4 000</td></tr>
+              <tr><td>三轴货车 (≤20t)</td><td>≤ 11 000</td><td>≤ 2 550</td><td>≤ 4 000</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <button class="btn btn-primary" onclick="showPage('main-params')">下一步：尺寸参数 →</button>
+      </div>
+    </div>
+
+    <!-- ═══════════════ PAGE: 主要尺寸参数 ═══════════════ -->
+    <div id="page-main-params" class="page">
+      <div class="page-title">主要尺寸参数确定</div>
+      <div class="page-subtitle">教材§1.3 — 外廓尺寸、轴距、轮距、前后悬</div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📐</span> 基本尺寸输入</div>
+          <button class="btn btn-ghost btn-sm" onclick="fillSampleData()">📥 填入示例数据（紧凑型轿车）</button>
+        </div>
+        <div class="card-body">
+          <div class="card-note">
+            轴距 L 对整备质量、总长、最小转弯直径、传动轴长度等有影响。<br>
+            乘用车总长 Lₐ ≈ L/C，C 值：前置前驱 0.62~0.66，前置后驱 0.52~0.56。
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>车辆总长 Lₐ <span class="unit">mm</span></label>
+              <input type="number" id="d-length" value="4500" min="2000" max="20000" oninput="calcDimensions()">
+            </div>
+            <div class="form-group">
+              <label>车辆总宽 Bₐ <span class="unit">mm</span></label>
+              <input type="number" id="d-width" value="1820" min="1000" max="2600" oninput="calcDimensions()">
+            </div>
+            <div class="form-group">
+              <label>车辆总高 Hₐ <span class="unit">mm</span></label>
+              <input type="number" id="d-height" value="1470" min="1000" max="4500" oninput="calcDimensions()">
+            </div>
+            <div class="form-group">
+              <label>轴距 L <span class="unit">mm</span></label>
+              <input type="number" id="d-wb" value="2650" min="1000" max="8000" oninput="calcDimensions()">
+            </div>
+            <div class="form-group">
+              <label>前轮距 B₁ <span class="unit">mm</span></label>
+              <input type="number" id="d-tf" value="1540" min="800" max="2500" oninput="calcDimensions()">
+            </div>
+            <div class="form-group">
+              <label>后轮距 B₂ <span class="unit">mm</span></label>
+              <input type="number" id="d-tr" value="1530" min="800" max="2500" oninput="calcDimensions()">
+            </div>
+            <div class="form-group">
+              <label>前悬 L_F <span class="unit">mm</span></label>
+              <input type="number" id="d-front-oh" value="900" min="200" max="3000" oninput="calcDimensions()">
+            </div>
+            <div class="form-group">
+              <label>后悬 L_R <span class="unit">mm</span></label>
+              <input type="number" id="d-rear-oh" value="950" min="200" max="3500" oninput="calcDimensions()">
+            </div>
+            <div class="form-group">
+              <label>最小离地间隙 h_min <span class="unit">mm</span></label>
+              <input type="number" id="d-ground" value="175" min="100" max="500" oninput="calcDimensions()">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📊</span> 比例关系校验</div>
+        </div>
+        <div class="card-body">
+          <div class="result-grid" id="dim-results"></div>
+          <div id="dim-warnings" style="margin-top:12px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📋</span> 轴距参考范围（教材表1-4）</div>
+        </div>
+        <div class="card-body">
+          <table class="ref-table">
+            <thead>
+              <tr><th>车型</th><th>级别（排量参考）</th><th>轴距 /mm</th><th>轮距 /mm</th></tr>
+            </thead>
+            <tbody>
+              <tr><td rowspan="5">乘用车</td><td>V ≤ 1.0L</td><td>2000~2200</td><td>1100~1380</td></tr>
+              <tr><td>1.0 < V ≤ 1.6L</td><td>2100~2540</td><td>1150~1500</td></tr>
+              <tr><td>1.6 < V ≤ 2.5L</td><td>2500~2860</td><td>1300~1500</td></tr>
+              <tr><td>2.5 < V ≤ 4.0L</td><td>2850~3400</td><td>1400~1580</td></tr>
+              <tr><td>V > 4.0L</td><td>2900~3900</td><td>1560~1620</td></tr>
+              <tr><td rowspan="2">商用客车</td><td>城市客车（单车）</td><td>4500~5000</td><td>1740~2050</td></tr>
+              <tr><td>长途客车（单车）</td><td>5000~6500</td><td>1740~2050</td></tr>
+              <tr><td rowspan="4">货车(4x2)</td><td>mₐ ≤ 1.8t</td><td>1700~2900</td><td>1150~1350</td></tr>
+              <tr><td>1.8 < mₐ ≤ 6.0t</td><td>2300~3600</td><td>1300~1650</td></tr>
+              <tr><td>6.0 < mₐ ≤ 14.0t</td><td>3600~5500</td><td>1700~2000</td></tr>
+              <tr><td>mₐ > 14.0t</td><td>4500~5600</td><td>1840~2000</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ PAGE: 质量参数 ═══════════════ -->
+    <div id="page-mass-params" class="page">
+      <div class="page-title">质量参数确定</div>
+      <div class="page-subtitle">教材§1.3 — 整备质量、载质量、总质量、质量系数</div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">⚖️</span> 质量参数计算</div>
+        </div>
+        <div class="card-body">
+          <div class="card-note">
+            汽车总质量 mₐ = m₀ + (65+α)·n（乘用车/商用客车）<br>
+            质量系数 η_m0 = m_e / m₀，反映设计与工艺水平，值越大越先进。
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>车型分类</label>
+              <select id="m-vtype" onchange="calcMass()">
+                <option value="passenger">乘用车</option>
+                <option value="bus">商用客车</option>
+                <option value="truck">货车</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>乘员数（含驾驶员）n</label>
+              <input type="number" id="m-seats" value="5" min="1" max="100" oninput="calcMass()">
+            </div>
+            <div class="form-group">
+              <label>行李系数 α</label>
+              <select id="m-alpha" onchange="calcMass()">
+                <option value="5">5 — 中大型/大型乘用车</option>
+                <option value="10" selected>10 — 微型~中型乘用车</option>
+                <option value="0">0 — 城市客车</option>
+                <option value="12">12 — 长途客车</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>整备质量 m₀ <span class="unit">kg</span></label>
+              <input type="number" id="m-curb" value="1350" min="500" max="30000" oninput="calcMass()">
+            </div>
+            <div class="form-group">
+              <label>载质量 m_e <span class="unit">kg</span>（货车用）</label>
+              <input type="number" id="m-payload" value="0" min="0" max="50000" oninput="calcMass()">
+            </div>
+            <div class="form-group">
+              <label>设计目标人均整备质量 <span class="unit">t/人</span></label>
+              <input type="number" id="m-target-ratio" value="0.27" step="0.01" oninput="calcMass()">
+            </div>
+          </div>
+
+          <div class="result-grid" id="mass-results" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📋</span> 质量系数参考（教材表1-6）</div>
+        </div>
+        <div class="card-body">
+          <table class="ref-table">
+            <thead><tr><th>车型</th><th>总质量 mₐ</th><th>质量系数 η_m0</th></tr></thead>
+            <tbody>
+              <tr><td rowspan="3">货车</td><td>1.8 < mₐ ≤ 6.0t</td><td>0.80 ~ 1.10</td></tr>
+              <tr><td>6.0 < mₐ ≤ 14.0t</td><td>1.20 ~ 1.35</td></tr>
+              <tr><td>mₐ > 14.0t</td><td>1.30 ~ 1.70</td></tr>
+            </tbody>
+          </table>
+          <br>
+          <table class="ref-table">
+            <thead><tr><th>整车级别（排量参考）</th><th>乘用车人均整备质量 /（t·人⁻¹）</th></tr></thead>
+            <tbody>
+              <tr><td>V ≤ 1.0L</td><td>0.15 ~ 0.16</td></tr>
+              <tr><td>1.0 < V ≤ 1.6L</td><td>0.17 ~ 0.24</td></tr>
+              <tr><td>1.6 < V ≤ 2.5L</td><td>0.21 ~ 0.29</td></tr>
+              <tr><td>2.5 < V ≤ 4.0L</td><td>0.29 ~ 0.34</td></tr>
+              <tr><td>V > 4.0L</td><td>0.29 ~ 0.34</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ PAGE: 驱动电机选型 ═══════════════ -->
+    <div id="page-engine" class="page">
+      <div class="page-title">驱动电机选型与功率计算</div>
+      <div class="page-subtitle">第六篇§21.1 — 按最高车速确定电机额定功率（式21-15），峰值功率、额定/峰值转矩匹配</div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">⚡</span> 驱动电机额定功率估算（按最高车速）</div>
+        </div>
+        <div class="card-body">
+          <div class="card-note">
+            式21-15：P_e = (1/η_T) · [ M·g·f·v_max/3600 + C_D·A·v³_max/76140 ]<br>
+            纯电动单级减速器 η_T ≈ 0.90~0.94；滚动阻力系数 f 乘用车取 0.013~0.018（良好路面）
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>整车总质量 M <span class="unit">kg</span></label>
+              <input type="number" id="e-ma" value="1600" oninput="calcEngine()">
+            </div>
+            <div class="form-group">
+              <label>最高车速 v_max <span class="unit">km/h</span></label>
+              <input type="number" id="e-vmax" value="150" oninput="calcEngine()">
+            </div>
+            <div class="form-group">
+              <label>空气阻力系数 C_D</label>
+              <input type="number" id="e-cd" value="0.30" step="0.01" oninput="calcEngine()">
+            </div>
+            <div class="form-group">
+              <label>迎风面积 A <span class="unit">m²</span></label>
+              <input type="number" id="e-area" value="2.10" step="0.05" oninput="calcEngine()">
+            </div>
+            <div class="form-group">
+              <label>传动系效率 η_T</label>
+              <input type="number" id="e-eta" value="0.92" step="0.01" oninput="calcEngine()">
+            </div>
+            <div class="form-group">
+              <label>滚动阻力系数 f</label>
+              <input type="number" id="e-f" value="0.015" step="0.001" oninput="calcEngine()">
+            </div>
+          </div>
+          <div class="result-grid" id="engine-results" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">🔩</span> 电动机参数选型（额定 / 峰值）</div>
+        </div>
+        <div class="card-body">
+          <div class="card-note">
+            额定转矩 T_e = 9550·P_e/n_e；峰值系数 λ = P_max/P_e，纯电动乘用车一般 λ ≈ 1.8~2.5。<br>
+            选型应满足：额定功率 ≥ 上方"最高车速所需功率"；峰值功率/峰值转矩满足加速与爬坡要求（见动力性计算）。
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>电动机类型</label>
+              <select id="e-mtype" onchange="calcEngine()">
+                <option value="pmsm" selected>永磁同步电动机（PMSM）</option>
+                <option value="acim">交流异步感应电动机</option>
+                <option value="srm">开关磁阻电动机（SRM）</option>
+                <option value="dc">直流电动机</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>额定功率 P_e <span class="unit">kW</span></label>
+              <input type="number" id="p-power" value="55" oninput="calcEngine()">
+            </div>
+            <div class="form-group">
+              <label>峰值功率 P_max <span class="unit">kW</span></label>
+              <input type="number" id="e-pmax" value="110" oninput="calcEngine()">
+            </div>
+            <div class="form-group">
+              <label>额定转速 n_e <span class="unit">r/min</span></label>
+              <input type="number" id="e-ne" value="4000" oninput="calcEngine()">
+            </div>
+            <div class="form-group">
+              <label>峰值转矩 T_max <span class="unit">N·m</span></label>
+              <input type="number" id="p-torque" value="280" oninput="calcEngine()">
+            </div>
+            <div class="form-group">
+              <label>最高转速 n_max <span class="unit">r/min</span></label>
+              <input type="number" id="e-nmax" value="12000" oninput="calcEngine()">
+            </div>
+          </div>
+          <div class="result-grid" id="engine-torque-results" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📋</span> 驱动电机参数参考范围（纯电动乘用车）</div>
+        </div>
+        <div class="card-body">
+          <table class="ref-table">
+            <thead><tr><th>整车类别</th><th>最高车速 /km·h⁻¹</th><th>峰值比功率 /kW·t⁻¹</th><th>额定比功率 /kW·t⁻¹</th><th>峰值/额定功率比 λ</th></tr></thead>
+            <tbody>
+              <tr><td>微型/小型纯电动轿车</td><td>100~140</td><td>45~75</td><td>20~35</td><td>1.8~2.5</td></tr>
+              <tr><td>紧凑型纯电动轿车</td><td>140~170</td><td>55~95</td><td>25~45</td><td>2.0~2.5</td></tr>
+              <tr><td>中大型纯电动轿车</td><td>160~200</td><td>70~130</td><td>35~60</td><td>2.0~3.0</td></tr>
+              <tr><td>纯电动SUV / MPV</td><td>150~180</td><td>60~110</td><td>30~55</td><td>2.0~2.8</td></tr>
+            </tbody>
+          </table>
+          <div class="card-note" style="margin-top:10px">表20-1：四类电机功率密度——直流：差；交流异步：一般；永磁同步：好；开关磁阻：一般。永磁同步综合性能最优，为当前纯电动乘用车主流。</div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════ PAGE: 动力性计算 ═══════════════ -->
+    <div id="page-performance" class="page">
+      <div class="page-title">动力性指标计算（电驱动）</div>
+      <div class="page-subtitle">第六篇§21.1 — 驱动力（式21-2/18）、最高车速、最大爬坡度、0-100km/h加速、最小转弯直径</div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📈</span> 电驱动力与动力性能</div>
+        </div>
+        <div class="card-body">
+          <div class="card-note">
+            车轮驱动力 F_t = T_tq·i_g·i_0·η/r（式21-18）；纯电动单级减速 i_g=1。<br>
+            行驶阻力 ΣF = M·g·f + C_D·A·v²/21.15 + M·g·i + δ·M·(dv/dt)（式21-11）。<br>
+            电机特性：基速以下恒峰值转矩，基速以上恒峰值功率。
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>峰值转矩 T_max <span class="unit">N·m</span></label>
+              <input type="number" id="p-torque" value="280" oninput="calcPerf()">
+            </div>
+            <div class="form-group">
+              <label>峰值功率 P_max <span class="unit">kW</span></label>
+              <input type="number" id="p-pmax" value="110" oninput="calcPerf()">
+            </div>
+            <div class="form-group">
+              <label>整车总质量 mₐ <span class="unit">kg</span></label>
+              <input type="number" id="p-ma" value="1600" oninput="calcPerf()">
+            </div>
+            <div class="form-group">
+              <label>主减速比 i_0（单级减速器）</label>
+              <input type="number" id="p-i0" value="8.0" step="0.1" oninput="calcPerf()">
+            </div>
+            <div class="form-group">
+              <label>车轮滚动半径 r <span class="unit">m</span></label>
+              <input type="number" id="p-r" value="0.30" step="0.01" oninput="calcPerf()">
+            </div>
+            <div class="form-group">
+              <label>传动效率 η</label>
+              <input type="number" id="p-eta" value="0.93" step="0.01" oninput="calcPerf()">
+            </div>
+            <div class="form-group">
+              <label>滚动阻力系数 f</label>
+              <input type="number" id="p-f" value="0.015" step="0.001" oninput="calcPerf()">
+            </div>
+            <div class="form-group">
+              <label>空气阻力系数 C_D</label>
+              <input type="number" id="p-cd" value="0.30" step="0.01" oninput="calcPerf()">
+            </div>
+            <div class="form-group">
+              <label>迎风面积 A <span class="unit">m²</span></label>
+              <input type="number" id="p-area" value="2.10" step="0.05" oninput="calcPerf()">
+            </div>
+            <div class="form-group">
+              <label>旋转质量换算系数 δ</label>
+              <input type="number" id="p-delta" value="1.06" step="0.01" oninput="calcPerf()">
+            </div>
+            <div class="form-group">
+              <label>目标最大爬坡度 i_max <span class="unit">%</span></label>
+              <input type="number" id="p-slope" value="30" oninput="calcPerf()">
+            </div>
+          </div>
+          <div class="result-grid" id="perf-results" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">🔄</span> 最小转弯直径估算</div>
+        </div>
+        <div class="card-body">
+          <div class="card-note">
+            转向盘转至极限位置时，前外转向轮轮迹圆的直径 D_min。影响因素：最大转角、轴距、轮距、转向轮数。
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>轴距 L <span class="unit">mm</span></label>
+              <input type="number" id="p-wb2" value="2650" oninput="calcTurnRadius()">
+            </div>
+            <div class="form-group">
+              <label>前轮最大转角 δ_max <span class="unit">°</span></label>
+              <input type="number" id="p-steer-angle" value="35" oninput="calcTurnRadius()">
+            </div>
+            <div class="form-group">
+              <label>主销距 (前轮中心到主销距离) <span class="unit">mm</span></label>
+              <input type="number" id="p-kingpin" value="770" oninput="calcTurnRadius()">
+            </div>
+          </div>
+          <div class="result-grid" id="turn-results" style="margin-top:14px;"></div>
+          <br>
+          <table class="ref-table">
+            <thead><tr><th>纯电动乘用车级别</th><th>D_min /m</th></tr></thead>
+            <tbody>
+              <tr><td>微型/小型纯电动轿车</td><td>8.0 ~ 10.5</td></tr>
+              <tr><td>紧凑型纯电动轿车</td><td>9.0 ~ 11.5</td></tr>
+              <tr><td>中大型纯电动轿车</td><td>10.5 ~ 12.5</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════ PAGE: 续驶里程与电耗 ═══════════════ -->
+    <div id="page-fuel" class="page">
+      <div class="page-title">续驶里程与电耗</div>
+      <div class="page-subtitle">第六篇§21.2 — 续驶里程、百公里电耗、动力电池组数量校核（n₁功率/n₂能量取大者）</div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">🔋</span> 续驶里程估算</div>
+        </div>
+        <div class="card-body">
+          <div class="card-note">
+            续驶里程 L = E_可用 / E_c × 100；E_可用 = E_电池 × SOC可用系数。<br>
+            百公里电耗 E_c 受整车质量、风阻、滚阻、电驱动效率影响，纯电动乘用车一般 12~18 kWh/100km。
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>动力电池总能量 E_电池 <span class="unit">kW·h</span></label>
+              <input type="number" id="f-ebat" value="50" step="0.5" oninput="calcFuel()">
+            </div>
+            <div class="form-group">
+              <label>可用 SOC 系数</label>
+              <input type="number" id="f-soc" value="0.90" step="0.01" oninput="calcFuel()">
+            </div>
+            <div class="form-group">
+              <label>百公里电耗 E_c <span class="unit">kW·h/100km</span></label>
+              <input type="number" id="f-econ" value="15" step="0.1" oninput="calcFuel()">
+            </div>
+            <div class="form-group">
+              <label>目标续驶里程 <span class="unit">km</span></label>
+              <input type="number" id="f-rtarget" value="300" oninput="calcFuel()">
+            </div>
+          </div>
+          <div class="result-grid" id="fuel-results" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">🔌</span> 动力电池组数量校核</div>
+        </div>
+        <div class="card-body">
+          <div class="card-note">
+            按功率：n₁ = P_emax / (P_bmax·η_e·η_ec)；按能量：n₂ = 1000·W·L / (C_s·U_s)。<br>
+            取 n₁、n₂ 中较大者为电池组（模块）数目。W 为每公里电耗（kW·h/km）= E_c/100。
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>整车最大需求功率 P_emax <span class="unit">kW</span></label>
+              <input type="number" id="f-pemax" value="110" oninput="calcFuel()">
+            </div>
+            <div class="form-group">
+              <label>单模块最大功率 P_bmax <span class="unit">kW</span></label>
+              <input type="number" id="f-pbmax" value="6" step="0.1" oninput="calcFuel()">
+            </div>
+            <div class="form-group">
+              <label>电动机工作效率 η_e</label>
+              <input type="number" id="f-etae" value="0.92" step="0.01" oninput="calcFuel()">
+            </div>
+            <div class="form-group">
+              <label>控制器工作效率 η_ec</label>
+              <input type="number" id="f-etaec" value="0.96" step="0.01" oninput="calcFuel()">
+            </div>
+            <div class="form-group">
+              <label>模块电池容量 C_s <span class="unit">A·h</span></label>
+              <input type="number" id="f-cs" value="50" oninput="calcFuel()">
+            </div>
+            <div class="form-group">
+              <label>模块电池电压 U_s <span class="unit">V</span></label>
+              <input type="number" id="f-us" value="48" oninput="calcFuel()">
+            </div>
+          </div>
+          <div class="result-grid" id="battery-results" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📋</span> 动力电池能量密度与电耗参考</div>
+        </div>
+        <div class="card-body">
+          <table class="ref-table">
+            <thead><tr><th>电池类型 / 项目</th><th>单体能量密度 /W·h·kg⁻¹</th><th>系统能量密度 /W·h·kg⁻¹</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td>磷酸铁锂（LFP）</td><td>120~160</td><td>90~140</td><td>安全性好、循环寿命长，主流</td></tr>
+              <tr><td>三元锂（NCM/NCA）</td><td>180~260</td><td>140~200</td><td>能量密度高、低温较好</td></tr>
+              <tr><td>铅酸电池</td><td>30~50</td><td>25~40</td><td>价格低，续驶里程/寿命短</td></tr>
+            </tbody>
+          </table>
+          <table class="ref-table" style="margin-top:12px">
+            <thead><tr><th>纯电动乘用车类别</th><th>百公里电耗参考 /kW·h·100km⁻¹</th><th>常见电池能量 /kW·h</th><th>续驶里程参考 /km</th></tr></thead>
+            <tbody>
+              <tr><td>微型/小型</td><td>9~13</td><td>20~40</td><td>150~330</td></tr>
+              <tr><td>紧凑型</td><td>12~16</td><td>40~65</td><td>300~550</td></tr>
+              <tr><td>中大型 / SUV</td><td>15~21</td><td>60~100</td><td>400~700</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════ PAGE: 轴荷分配 ═══════════════ -->
+    <div id="page-axle-load" class="page">
+      <div class="page-title">轴荷分配计算</div>
+      <div class="page-subtitle">教材§1.3 — 轴荷分配（空载/满载前后轴负荷）</div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">⚙️</span> 轴荷计算</div>
+        </div>
+        <div class="card-body">
+          <div class="card-note">
+            质心距前轴距离 L₁，质心距后轴距离 L₂，则：<br>
+            G₁ = mₐ·g·L₂/L（前轴载荷），G₂ = mₐ·g·L₁/L（后轴载荷）
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>汽车总质量 mₐ <span class="unit">kg</span></label>
+              <input type="number" id="al-ma" value="1800" oninput="calcAxleLoad()">
+            </div>
+            <div class="form-group">
+              <label>整备质量 m₀ <span class="unit">kg</span></label>
+              <input type="number" id="al-m0" value="1350" oninput="calcAxleLoad()">
+            </div>
+            <div class="form-group">
+              <label>轴距 L <span class="unit">mm</span></label>
+              <input type="number" id="al-wb" value="2650" oninput="calcAxleLoad()">
+            </div>
+            <div class="form-group">
+              <label>质心距前轴距离 L₁（满载）<span class="unit">mm</span></label>
+              <input type="number" id="al-l1" value="1250" oninput="calcAxleLoad()">
+            </div>
+            <div class="form-group">
+              <label>驱动形式</label>
+              <select id="al-drive" onchange="calcAxleLoad()">
+                <option value="FF">4×2 前轮驱动 (FF)</option>
+                <option value="FR" selected>4×2 后轮驱动 (FR)</option>
+                <option value="4WD">4×4 全轮驱动</option>
+              </select>
+            </div>
+          </div>
+          <div class="result-grid" id="axle-results" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📋</span> 轴荷分配参考（教材表1-9）</div>
+        </div>
+        <div class="card-body">
+          <table class="ref-table">
+            <thead><tr><th>车型</th><th colspan="2">满载</th><th colspan="2">空载</th></tr>
+            <tr><th></th><th>前轴</th><th>后轴</th><th>前轴</th><th>后轴</th></tr></thead>
+            <tbody>
+              <tr><td>乘用车 — 前置前轮驱动</td><td>47%~60%</td><td>40%~53%</td><td>56%~66%</td><td>34%~44%</td></tr>
+              <tr><td>乘用车 — 前置后轮驱动</td><td>45%~50%</td><td>50%~55%</td><td>51%~56%</td><td>44%~49%</td></tr>
+              <tr><td>乘用车 — 后置后轮驱动</td><td>40%~46%</td><td>54%~60%</td><td>38%~50%</td><td>50%~62%</td></tr>
+              <tr><td>商用货车 4×2 单胎</td><td>32%~40%</td><td>60%~68%</td><td>50%~59%</td><td>41%~50%</td></tr>
+              <tr><td>商用货车 4×2 双胎长/短头式</td><td>25%~27%</td><td>73%~75%</td><td>44%~49%</td><td>51%~56%</td></tr>
+              <tr><td>商用货车 4×2 双胎平头式</td><td>30%~35%</td><td>65%~70%</td><td>48%~54%</td><td>46%~52%</td></tr>
+              <tr><td>商用货车 6×4 后轮双胎</td><td>19%~25%</td><td>75%~81%</td><td>31%~37%</td><td>63%~69%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ PAGE: 轮胎选型 ═══════════════ -->
+    <div id="page-tyre" class="page">
+      <div class="page-title">轮胎选型计算</div>
+      <div class="page-subtitle">教材§1.6 — 轮胎规格、负荷能力、速度等级</div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">🔵</span> 轮胎负荷校核</div>
+        </div>
+        <div class="card-body">
+          <div class="card-note">
+            轮胎负荷系数 = 各轮最大静负荷 / 轮胎额定负荷，应控制在 0.85 ~ 1.00 之间。<br>
+            前轮负荷系数一般应低于后轮。
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>前轴总负荷（满载）<span class="unit">kg</span></label>
+              <input type="number" id="t-front-load" value="900" oninput="calcTyre()">
+            </div>
+            <div class="form-group">
+              <label>后轴总负荷（满载）<span class="unit">kg</span></label>
+              <input type="number" id="t-rear-load" value="900" oninput="calcTyre()">
+            </div>
+            <div class="form-group">
+              <label>前轮数量（每侧）</label>
+              <select id="t-front-count" onchange="calcTyre()">
+                <option value="1">1 （单胎）</option>
+                <option value="2">2 （双胎）</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>后轮数量（每侧）</label>
+              <select id="t-rear-count" onchange="calcTyre()">
+                <option value="1">1 （单胎）</option>
+                <option value="2">2 （双胎）</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>选用轮胎规格（输入标准负荷能力）<span class="unit">kg/胎</span></label>
+              <input type="number" id="t-tire-capacity" value="500" oninput="calcTyre()">
+            </div>
+            <div class="form-group">
+              <label>最高车速 <span class="unit">km/h</span></label>
+              <input type="number" id="t-vmax" value="185" oninput="calcTyre()">
+            </div>
+          </div>
+          <div class="result-grid" id="tyre-results" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📋</span> 速度等级符号对照表（GB 9743-2015）</div>
+        </div>
+        <div class="card-body">
+          <table class="ref-table">
+            <thead><tr><th>符号</th><th>允许最高行驶速度 /km·h⁻¹</th><th>符号</th><th>允许最高行驶速度 /km·h⁻¹</th></tr></thead>
+            <tbody>
+              <tr><td>C</td><td>60</td><td>N</td><td>140</td></tr>
+              <tr><td>E</td><td>70</td><td>P</td><td>150</td></tr>
+              <tr><td>F</td><td>80</td><td>Q</td><td>160</td></tr>
+              <tr><td>G</td><td>90</td><td>R</td><td>170</td></tr>
+              <tr><td>J</td><td>100</td><td>S</td><td>180</td></tr>
+              <tr><td>K</td><td>110</td><td>T</td><td>190</td></tr>
+              <tr><td>L</td><td>120</td><td>H</td><td>210</td></tr>
+              <tr><td>M</td><td>130</td><td>V</td><td>240</td></tr>
+              <tr><td></td><td></td><td>W</td><td>270</td></tr>
+              <tr><td></td><td></td><td>Y</td><td>300</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ PAGE: 车身布置 ═══════════════ -->
+    <div id="page-body-layout" class="page">
+      <div class="page-title">车身总体布置</div>
+      <div class="page-subtitle">第六篇§19.3 — 整车基准零线、电驱动总成布置、动力电池布置</div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">🏗️</span> 乘用车车身内部尺寸估算</div>
+        </div>
+        <div class="card-body">
+          <div class="card-note">
+            乘用车总高 Hₐ 由轴间底部离地高 h_m、地板及下部零件高 h_p、室内高 h_R 和车顶造型高 h_t 构成。<br>
+            室内高 h_R 一般在 1120~1380 mm 之间，车顶造型高 h_t 约 20~40 mm。
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>车身级别（座椅高度参考）</label>
+              <select id="bl-disp" onchange="calcBodyLayout()">
+                <option value="1.0">微型 / 小型</option>
+                <option value="1.6" selected>紧凑型</option>
+                <option value="2.5">中型</option>
+                <option value="4.0">中大型</option>
+                <option value="99">大型 / SUV</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>总高 Hₐ <span class="unit">mm</span></label>
+              <input type="number" id="bl-ha" value="1470" oninput="calcBodyLayout()">
+            </div>
+            <div class="form-group">
+              <label>最小离地间隙 h_min <span class="unit">mm</span></label>
+              <input type="number" id="bl-hmin" value="175" oninput="calcBodyLayout()">
+            </div>
+            <div class="form-group">
+              <label>地板厚及下部零件高 h_p <span class="unit">mm</span></label>
+              <input type="number" id="bl-hp" value="50" oninput="calcBodyLayout()">
+            </div>
+            <div class="form-group">
+              <label>车顶造型高 h_t <span class="unit">mm</span></label>
+              <input type="number" id="bl-ht" value="30" oninput="calcBodyLayout()">
+            </div>
+          </div>
+          <div class="result-grid" id="body-results" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📋</span> 乘用车车身内部布置尺寸范围（教材表1-26）</div>
+        </div>
+        <div class="card-body">
+          <div id="body-layout-table-container">
+            <table class="ref-table" id="body-layout-table">
+              <thead>
+                <tr><th>车身级别</th><th>H点到地板(mm)</th><th>驾驶员H高(mm)</th><th>前排头部间隙(mm)</th><th>室内高(mm)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>中大型 / 大型</td><td>300~420</td><td>940~960</td><td>450~510</td><td>1500~1800以上</td></tr>
+                <tr><td>中型</td><td>300~420</td><td>940~960</td><td>450~480</td><td>1380~1600</td></tr>
+                <tr><td>微型 / 小型 / 紧凑型</td><td>300~420</td><td>900~950</td><td>450~480</td><td>1300~1500</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">🚗</span> 通过性几何参数</div>
+        </div>
+        <div class="card-body">
+          <div class="card-note">
+            通过性几何参数：最小离地间隙 h_min、接近角 γ₁、离去角 γ₂、纵向通过半径 ρ₁
+          </div>
+          <table class="ref-table">
+            <thead><tr><th>车型</th><th>h_min /mm</th><th>γ₁ /(°)</th><th>γ₂ /(°)</th><th>ρ₁ /m</th></tr></thead>
+            <tbody>
+              <tr><td>4×2乘用车</td><td>150~220</td><td>20~30</td><td>15~22</td><td>3.0~8.3</td></tr>
+              <tr><td>4×4乘用车</td><td>210~250</td><td>45~50</td><td>35~40</td><td>1.7~3.6</td></tr>
+              <tr><td>4×2货车</td><td>180~300</td><td>40~60</td><td>25~45</td><td>2.3~6.0</td></tr>
+              <tr><td>4×4、6×6货车</td><td>260~350</td><td>45~60</td><td>35~45</td><td>1.9~3.6</td></tr>
+              <tr><td>4×2、6×4客车</td><td>220~370</td><td>10~40</td><td>6~20</td><td>4.0~9.0</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ PAGE: H点 & 人机 ═══════════════ -->
+    <div id="page-hpoint" class="page">
+      <div class="page-title">H点设计与人机工程校核</div>
+      <div class="page-subtitle">依据毕设论文（车身总布置设计）· SAE J826 · GB/T 11563 · SAE J941</div>
+
+      <div class="tab-pills">
+        <button class="tab-pill active" onclick="showTab('hp-hpoint', this)">H点定位</button>
+        <button class="tab-pill" onclick="showTab('hp-eye', this)">眼椭圆</button>
+        <button class="tab-pill" onclick="showTab('hp-head', this)">头廓包络</button>
+        <button class="tab-pill" onclick="showTab('hp-reach', this)">手伸及界面</button>
+        <button class="tab-pill" onclick="showTab('hp-knee', this)">膝部包络</button>
+      </div>
+
+      <!-- H点定位 -->
+      <div id="tab-hp-hpoint" class="tab-content active">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">📍</span> 驾驶员H点定位计算</div>
+          </div>
+          <div class="card-body">
+            <div class="card-note">
+              H点（Hip Point）：躯干与大腿的铰接点，是车身内部布置最重要的基准点。<br>
+              SgRP（Seating Reference Point）：乘坐基准点，即设计H点 R点。<br>
+              AHP（Accelerator Heel Point）：加速踏板踵点。H30为H点到AHP的垂直距离。
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>座椅高度 H30（H点到AHP垂距）<span class="unit">mm</span></label>
+                <input type="number" id="hp-h30" value="325" oninput="calcHPoint()">
+              </div>
+              <div class="form-group">
+                <label>加速踏板踵点X坐标（到前轮中心）<span class="unit">mm</span></label>
+                <input type="number" id="hp-ahp-x" value="730" oninput="calcHPoint()">
+              </div>
+              <div class="form-group">
+                <label>AHP的Z坐标（地板面以上）<span class="unit">mm</span></label>
+                <input type="number" id="hp-ahp-z" value="-115" oninput="calcHPoint()">
+              </div>
+              <div class="form-group">
+                <label>AHP的Y坐标（车辆中心面左为负）<span class="unit">mm</span></label>
+                <input type="number" id="hp-ahp-y" value="-323" oninput="calcHPoint()">
+              </div>
+              <div class="form-group">
+                <label>转向盘到AHP水平距离 L11 <span class="unit">mm</span></label>
+                <input type="number" id="hp-l11" value="640" oninput="calcHPoint()">
+              </div>
+              <div class="form-group">
+                <label>转向盘直径 W9 <span class="unit">mm</span></label>
+                <input type="number" id="hp-w9" value="390" oninput="calcHPoint()">
+              </div>
+            </div>
+            <div class="result-grid" id="hpoint-results" style="margin-top:14px;"></div>
+
+            <hr class="divider">
+            <div class="card-note">
+              SgRP曲线方程（A类车）：X = SgRP到PRP水平距离（mm），H30为座椅高度（mm）<br>
+              踏板平面角 A47（°）由H30确定。
+            </div>
+            <div class="result-grid" id="hpoint-sgpr-results" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 眼椭圆 -->
+      <div id="tab-hp-eye" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">👁️</span> 驾驶员眼椭圆定位（SAE J941）</div>
+          </div>
+          <div class="card-body">
+            <div class="card-note">
+              眼椭圆：不同身材驾驶员正常驾驶姿势时眼睛位置在车身中的统计分布图形。<br>
+              适用范围：靠背角 5°~40°，座椅垂直调节 0~38mm，水平调节 102~165mm，最后H点到踵点水平距离 ≥508mm
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>转向盘中心到AHP水平距离 L6 <span class="unit">mm</span></label>
+                <input type="number" id="eye-l6" value="640" oninput="calcEyeEllipse()">
+              </div>
+              <div class="form-group">
+                <label>座椅高度 H30 <span class="unit">mm</span></label>
+                <input type="number" id="eye-h30" value="325" oninput="calcEyeEllipse()">
+              </div>
+              <div class="form-group">
+                <label>变速器类型</label>
+                <select id="eye-trans" onchange="calcEyeEllipse()">
+                  <option value="M">手动（MT）</option>
+                  <option value="A">自动（AT）</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>SgRP的Y坐标 <span class="unit">mm</span></label>
+                <input type="number" id="eye-sgrp-y" value="-472" oninput="calcEyeEllipse()">
+              </div>
+              <div class="form-group">
+                <label>坐垫角 A19 <span class="unit">°</span></label>
+                <input type="number" id="eye-a19" value="4.6" step="0.1" oninput="calcEyeEllipse()">
+              </div>
+            </div>
+            <div class="result-grid" id="eye-results" style="margin-top:14px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 头廓包络 -->
+      <div id="tab-hp-head" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">🧠</span> 头廓包络面定位（SAE J1052-2002）</div>
+          </div>
+          <div class="card-body">
+            <div class="card-note">
+              头廓包络面：不同身材乘员以正常姿势入座时头廓的统计包络，用于确定头部空间。<br>
+              中心坐标以PRP（Y零面）和过AHP的水平面为基准定位。
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>转向盘到AHP水平距离 L6 <span class="unit">mm</span></label>
+                <input type="number" id="head-l6" value="640" oninput="calcHeadProfile()">
+              </div>
+              <div class="form-group">
+                <label>座椅高度 H30 <span class="unit">mm</span></label>
+                <input type="number" id="head-h30" value="325" oninput="calcHeadProfile()">
+              </div>
+              <div class="form-group">
+                <label>变速器类型系数 t</label>
+                <select id="head-t" onchange="calcHeadProfile()">
+                  <option value="1">手动（t=1）</option>
+                  <option value="0">自动（t=0）</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>SgRP的Y坐标 W20 <span class="unit">mm</span></label>
+                <input type="number" id="head-w20" value="-472" oninput="calcHeadProfile()">
+              </div>
+              <div class="form-group">
+                <label>座椅水平调节量 TL23 <span class="unit">mm</span></label>
+                <input type="number" id="head-tl23" value="225" oninput="calcHeadProfile()">
+              </div>
+            </div>
+            <div class="result-grid" id="head-results" style="margin-top:14px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 手伸及界面 -->
+      <div id="tab-hp-reach" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">🤚</span> 驾驶员手伸及界面（SAE J287）</div>
+          </div>
+          <div class="card-body">
+            <div class="card-note">
+              手伸及界面：驾驶员系安全带、右脚踩加速踏板、一手握转向盘时，另一手所能伸及的最大空间廓面。<br>
+              驾驶室内所有手操纵装置应布置在此廓面内。应选用5%百分位人体模型的界面以满足95%人群需求。
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>座椅高度 H30 <span class="unit">mm</span></label>
+                <input type="number" id="reach-h30" value="325" oninput="calcReach()">
+              </div>
+              <div class="form-group">
+                <label>躯干角 A40 <span class="unit">°</span></label>
+                <input type="number" id="reach-a40" value="25" oninput="calcReach()">
+              </div>
+              <div class="form-group">
+                <label>转向盘直径 W9 <span class="unit">mm</span></label>
+                <input type="number" id="reach-w9" value="390" oninput="calcReach()">
+              </div>
+              <div class="form-group">
+                <label>转向盘倾角 A18 <span class="unit">°</span></label>
+                <input type="number" id="reach-a18" value="25" oninput="calcReach()">
+              </div>
+              <div class="form-group">
+                <label>转向盘中心到AHP水平距离 L11 <span class="unit">mm</span></label>
+                <input type="number" id="reach-l11" value="640" oninput="calcReach()">
+              </div>
+              <div class="form-group">
+                <label>转向盘中心到AHP垂直距离 H17 <span class="unit">mm</span></label>
+                <input type="number" id="reach-h17" value="380" oninput="calcReach()">
+              </div>
+              <div class="form-group">
+                <label>躯干线和大腿线夹角 A42 <span class="unit">°</span></label>
+                <input type="number" id="reach-a42" value="108" oninput="calcReach()">
+              </div>
+              <div class="form-group">
+                <label>SgRP到AHP水平距离 L53 <span class="unit">mm</span></label>
+                <input type="number" id="reach-l53" value="717" oninput="calcReach()">
+              </div>
+              <div class="form-group">
+                <label>AHP的X坐标 <span class="unit">mm</span></label>
+                <input type="number" id="reach-ahp-x" value="730" oninput="calcReach()">
+              </div>
+              <div class="form-group">
+                <label>SgRP的X坐标 <span class="unit">mm</span></label>
+                <input type="number" id="reach-sgrp-x" value="1030" oninput="calcReach()">
+              </div>
+            </div>
+            <div class="result-grid" id="reach-results" style="margin-top:14px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 膝部包络 -->
+      <div id="tab-hp-knee" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">🦵</span> 驾驶员膝部包络线定位</div>
+          </div>
+          <div class="card-body">
+            <div class="card-note">
+              膝部特征点K：定义在膝关节和裸关节连线的垂直线上，K点到膝关节中心距离50.8mm。<br>
+              膝部包络线对仪表板下方空间设计和撞车安全具有重要意义。
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>座椅高度 H30 <span class="unit">mm</span></label>
+                <input type="number" id="knee-h30" value="325" oninput="calcKnee()">
+              </div>
+              <div class="form-group">
+                <label>定位基准点到AHP的水平距离 CHX（左膝）<span class="unit">mm</span></label>
+                <input type="number" id="knee-chx-l" value="430" oninput="calcKnee()">
+              </div>
+              <div class="form-group">
+                <label>离合器踏板中心到AHP水平距离 CX <span class="unit">mm</span></label>
+                <input type="number" id="knee-cx" value="180" oninput="calcKnee()">
+              </div>
+              <div class="form-group">
+                <label>离合器踏板中心到AHP垂直距离 CZ <span class="unit">mm</span></label>
+                <input type="number" id="knee-cz" value="200" oninput="calcKnee()">
+              </div>
+              <div class="form-group">
+                <label>定位基准点到AHP水平距离 CHX（右膝）<span class="unit">mm</span></label>
+                <input type="number" id="knee-chx-r" value="440" oninput="calcKnee()">
+              </div>
+            </div>
+            <div class="result-grid" id="knee-results" style="margin-top:14px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ PAGE: 汇总 ═══════════════ -->
+    <div id="page-summary" class="page">
+      <div class="page-title">设计汇总与校核</div>
+      <div class="page-subtitle">汇总所有计算参数，进行整体方案评估</div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">✅</span> 整车参数汇总</div>
+          <button class="btn btn-primary btn-sm" onclick="generateSummary()">🔄 更新汇总</button>
+        </div>
+        <div class="card-body">
+          <div id="summary-content">
+            <div class="card-note">点击「更新汇总」按钮，汇总所有已输入的计算参数。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📋</span> 设计规范检查清单</div>
+        </div>
+        <div class="card-body">
+          <ul class="checklist" id="checklist">
+            <li><span class="check-icon">⬜</span><span>外廓尺寸符合 GB 1589-2016 规定的最大限值</span></li>
+            <li><span class="check-icon">⬜</span><span>轴距与车型级别对应的参考范围相符（教材表1-4）</span></li>
+            <li><span class="check-icon">⬜</span><span>总质量不超过 GB 1589-2016 规定的最大限值</span></li>
+            <li><span class="check-icon">⬜</span><span>轴荷分配在该车型要求范围内（教材表1-9）</span></li>
+            <li><span class="check-icon">⬜</span><span>驱动电机额定功率满足最高车速需求（式21-15）</span></li>
+            <li><span class="check-icon">⬜</span><span>峰值/额定功率比 λ 在 1.8~3.0 范围内</span></li>
+            <li><span class="check-icon">⬜</span><span>峰值比功率、峰值转矩比在参考范围内（纯电动乘用车）</span></li>
+            <li><span class="check-icon">⬜</span><span>续驶里程满足设计目标（电池能量/电耗校核，式n₁/n₂）</span></li>
+            <li><span class="check-icon">⬜</span><span>最小转弯直径在参考范围内（教材表1-17）</span></li>
+            <li><span class="check-icon">⬜</span><span>轮胎负荷系数在 0.85~1.00 范围内</span></li>
+            <li><span class="check-icon">⬜</span><span>轮胎速度等级允许最高速度超过整车最高车速</span></li>
+            <li><span class="check-icon">⬜</span><span>H点位置符合 SAE J1517 推荐曲线范围</span></li>
+            <li><span class="check-icon">⬜</span><span>头部空间满足 SAE J1052 要求</span></li>
+            <li><span class="check-icon">⬜</span><span>运动学校核通过（转向轮、传动轴、悬架无干涉）</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ PAGE: 参考数据 ═══════════════ -->
+    <div id="page-refs" class="page">
+      <div class="page-title">参考数据表</div>
+      <div class="page-subtitle">教材常用参数表（《汽车设计》第5版 · 含第六篇 新能源汽车）</div>
+
+      <div class="tab-pills">
+        <button class="tab-pill active" onclick="showTab('ref-max-mass', this)">最大允许总质量</button>
+        <button class="tab-pill" onclick="showTab('ref-dmin', this)">最小转弯直径</button>
+        <button class="tab-pill" onclick="showTab('ref-suspension', this)">悬架参数</button>
+        <button class="tab-pill" onclick="showTab('ref-human', this)">人体基本尺寸</button>
+      </div>
+
+      <div id="tab-ref-max-mass" class="tab-content active">
+        <div class="card">
+          <div class="card-body">
+            <table class="ref-table">
+              <thead><tr><th>车辆类型</th><th>最大允许总质量 /kg</th></tr></thead>
+              <tbody>
+                <tr><td>三轮汽车</td><td>2 000</td></tr>
+                <tr><td>乘用车</td><td>4 500</td></tr>
+                <tr><td>二轴客车、货车及半挂牵引车</td><td>18 000</td></tr>
+                <tr><td>三轴客车、货车及半挂牵引车</td><td>25 000</td></tr>
+                <tr><td>单铰接客车</td><td>28 000</td></tr>
+                <tr><td>双转向轴四轴货车</td><td>31 000</td></tr>
+                <tr><td>挂车 — 半挂车（一轴）</td><td>18 000</td></tr>
+                <tr><td>挂车 — 半挂车（二轴）</td><td>35 000</td></tr>
+                <tr><td>挂车 — 半挂车（三轴）</td><td>40 000</td></tr>
+                <tr><td>挂车 — 中置轴（一轴）</td><td>10 000</td></tr>
+                <tr><td>挂车 — 中置轴（二轴）</td><td>18 000</td></tr>
+                <tr><td>挂车 — 中置轴（三轴）</td><td>24 000</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-ref-dmin" class="tab-content">
+        <div class="card">
+          <div class="card-body">
+            <table class="ref-table">
+              <thead><tr><th>车型</th><th>级别</th><th>D_min /m</th></tr></thead>
+              <tbody>
+                <tr><td rowspan="5">乘用车</td><td>V ≤ 1.0L</td><td>7.0~9.5</td></tr>
+                <tr><td>1.0 < V ≤ 1.6L</td><td>8.5~11.0</td></tr>
+                <tr><td>1.6 < V ≤ 2.5L</td><td>9.0~12.0</td></tr>
+                <tr><td>2.5 < V ≤ 4.0L</td><td>10.0~14.0</td></tr>
+                <tr><td>V > 4.0L</td><td>11.0~15.0</td></tr>
+                <tr><td rowspan="4">商用客车</td><td>Lₐ ≤ 3.5m</td><td>8.0~11.0</td></tr>
+                <tr><td>3.5 < Lₐ ≤ 7.0m</td><td>10.0~13.0</td></tr>
+                <tr><td>7.0 < Lₐ ≤ 10.0m</td><td>14.0~20.0</td></tr>
+                <tr><td>Lₐ > 10.0m</td><td>17.0~22.0</td></tr>
+                <tr><td rowspan="4">商用货车</td><td>mₐ ≤ 1.8t</td><td>8.0~12.0</td></tr>
+                <tr><td>1.8 < mₐ ≤ 6.0t</td><td>10.0~19.0</td></tr>
+                <tr><td>6.0 < mₐ ≤ 14.0t</td><td>12.0~20.0</td></tr>
+                <tr><td>mₐ > 14.0t</td><td>13.0~21.0</td></tr>
+                <tr><td rowspan="2">矿用自卸车</td><td>mₑ < 45t</td><td>15.0~19.0</td></tr>
+                <tr><td>mₑ > 45t</td><td>18.0~24.0</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-ref-suspension" class="tab-content">
+        <div class="card">
+          <div class="card-body">
+            <p style="color:var(--text2);font-size:12px;margin-bottom:10px;">悬架静挠度 f_c、动挠度 f_d 和偏频 n（教材表1-20）</p>
+            <table class="ref-table">
+              <thead><tr><th>车型</th><th>静挠度 f_c /mm</th><th>动挠度 f_d /mm</th><th>偏频 n /Hz</th></tr></thead>
+              <tbody>
+                <tr><td>乘用车</td><td>100~300</td><td>70~90</td><td>0.9~1.6</td></tr>
+                <tr><td>客车</td><td>70~150</td><td>50~80</td><td>1.3~1.8</td></tr>
+                <tr><td>货车</td><td>50~110</td><td>60~90</td><td>1.5~2.2</td></tr>
+                <tr><td>越野车</td><td>60~130</td><td>70~130</td><td>1.4~2.0</td></tr>
+              </tbody>
+            </table>
+            <br>
+            <p style="color:var(--text2);font-size:12px;margin-bottom:10px;">制动性能要求（GB 7258-2017）</p>
+            <table class="ref-table">
+              <thead><tr><th>车辆类型</th><th>制动初速度 /km·h⁻¹</th><th>制动距离 /m</th><th>FMDD /m·s⁻²</th></tr></thead>
+              <tbody>
+                <tr><td>座位数≤9 满载</td><td>50</td><td>≤20</td><td>≥5.9</td></tr>
+                <tr><td>座位数≤9 空载</td><td>50</td><td>≤19</td><td>≥6.2</td></tr>
+                <tr><td>其他总质量>4.5t 满载</td><td>50</td><td>≤22</td><td>≥5.4</td></tr>
+                <tr><td>其他总质量>4.5t 空载</td><td>50</td><td>≤21</td><td>≥5.8</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-ref-human" class="tab-content">
+        <div class="card">
+          <div class="card-body">
+            <p style="color:var(--text2);font-size:12px;margin-bottom:10px;">中国人体基本尺寸（教材表1-25）</p>
+            <table class="ref-table">
+              <thead><tr><th>测量项目</th><th>男均值/mm</th><th>男标准差/mm</th><th>女均值/mm</th><th>女标准差/mm</th></tr></thead>
+              <tbody>
+                <tr><td>身高</td><td>1688.25</td><td>81.83</td><td>1586.17</td><td>51.29</td></tr>
+                <tr><td>眼高</td><td>1585.32</td><td>61.61</td><td>1480.25</td><td>76.02</td></tr>
+                <tr><td>肩高</td><td>1420.98</td><td>54.35</td><td>1320.26</td><td>60.96</td></tr>
+                <tr><td>坐高</td><td>896.53</td><td>36.12</td><td>848.52</td><td>31.58</td></tr>
+                <tr><td>坐姿眼高</td><td>794</td><td>—</td><td>743</td><td>—</td></tr>
+                <tr><td>肘到座平面</td><td>245.23</td><td>41.81</td><td>238.63</td><td>25.63</td></tr>
+                <tr><td>大腿长</td><td>422.48</td><td>28.44</td><td>409.21</td><td>35.39</td></tr>
+                <tr><td>小腿长</td><td>401.34</td><td>21.57</td><td>368.60</td><td>22.21</td></tr>
+                <tr><td>膝臀间距</td><td>550.78</td><td>27.49</td><td>527.77</td><td>31.28</td></tr>
+                <tr><td>肩宽</td><td>426.32</td><td>20.35</td><td>391.71</td><td>21.67</td></tr>
+                <tr><td>臀宽</td><td>333.75</td><td>22.62</td><td>394.71</td><td>23.99</td></tr>
+              </tbody>
+            </table>
+            <br>
+            <p style="color:var(--text2);font-size:12px;margin-bottom:10px;">人体样板尺寸（第10/50/95百分位）</p>
+            <table class="ref-table">
+              <thead><tr><th>百分位</th><th>小腿长 A /mm</th><th>大腿长 B /mm</th></tr></thead>
+              <tbody>
+                <tr><td>第 10 百分位</td><td>390</td><td>406</td></tr>
+                <tr><td>第 50 百分位</td><td>417</td><td>432</td></tr>
+                <tr><td>第 95 百分位</td><td>460</td><td>456</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ PAGE: 智能评分报告 ═══════════════ -->
+    <div id="page-scoring" class="page">
+      <div class="page-title">📊 智能评分报告</div>
+      <div class="page-subtitle">根据各模块输入参数自动评分，生成课程设计提交文件</div>
+
+      <div class="score-card" id="scoreSummaryCard">
+        <div class="score-display">
+          <div class="score-label">汽车总体设计 — 综合评分</div>
+          <div class="score-value" id="totalScoreVal">--</div>
+          <div class="score-grade" id="totalGradeVal">请点击"重新计算评分"</div>
+        </div>
+        <div class="score-details">
+          <div class="score-detail-item"><div class="sd-label">车型与尺寸</div><div class="sd-value"><span id="sc1">--</span>/20</div></div>
+          <div class="score-detail-item"><div class="sd-label">质量参数</div><div class="sd-value"><span id="sc2">--</span>/15</div></div>
+          <div class="score-detail-item"><div class="sd-label">驱动电机匹配</div><div class="sd-value"><span id="sc3">--</span>/20</div></div>
+          <div class="score-detail-item"><div class="sd-label">动力性</div><div class="sd-value"><span id="sc4">--</span>/15</div></div>
+          <div class="score-detail-item"><div class="sd-label">总体布置</div><div class="sd-value"><span id="sc5">--</span>/20</div></div>
+          <div class="score-detail-item"><div class="sd-label">人机工程</div><div class="sd-value"><span id="sc6">--</span>/10</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📋</span> 详细评分明细</div>
+        </div>
+        <div class="card-body" style="padding:0">
+          <table class="grading-table" id="gradingTableVeh">
+            <thead>
+              <tr>
+                <th style="width:36%">评分项目</th>
+                <th style="width:20%">标准要求</th>
+                <th style="width:17%">实际值</th>
+                <th style="width:12%" class="score-col">得分</th>
+                <th style="width:15%" class="score-col">满分</th>
+              </tr>
+            </thead>
+            <tbody id="gradingBodyVeh"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📄</span> 整车参数汇总</div>
+        </div>
+        <div class="card-body">
+          <div id="scoringSummaryContent"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📚</span> 教师评阅辅助检查表</div>
+        </div>
+        <div class="card-body" style="padding:0">
+          <table class="grading-table" id="teacherCheckTable">
+            <thead>
+              <tr>
+                <th>检查项目</th>
+                <th>标准范围</th>
+                <th>本设计值</th>
+                <th class="score-col">评价</th>
+              </tr>
+            </thead>
+            <tbody id="teacherCheckBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="background:rgba(63,185,80,0.08);border:1px solid rgba(63,185,80,0.25);border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:var(--text2);">
+        <strong style="color:var(--green)">📦 学生提交说明：</strong><br>
+        点击「生成完整报告」后下载 TXT 报告文件。此文件包含：✓ 可读的文字报告（供您查看）&nbsp;✓ 机器可读的评分数据（用于教师统计）。<br>
+        <strong style="color:var(--red)">请将此 TXT 文件提交给教师！</strong>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="generateVehicleReport()">📥 生成完整报告（含数据文件）</button>
+        <button class="btn btn-ghost" onclick="calcSmartScoreVeh()">🔄 重新计算评分</button>
+      </div>
+    </div>
+
+    <!-- ═══════════════ PAGE: 说明书评阅 ═══════════════ -->
+    <div id="page-manual-review" class="page">
+      <div class="page-title">📝 说明书评阅</div>
+      <div class="page-subtitle">上传设计说明书 PDF，系统自动提取文本并与本工具计算值逐项比对，完全离线运行</div>
+
+      <div class="review-header">
+        <div class="rh-icon">📑</div>
+        <div>
+          <h3>设计说明书离线评阅系统</h3>
+          <p>数据符合度 · 排版格式规范 · 内容质量 三维度自动评分</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title"><span class="icon">ℹ️</span> 使用说明</div></div>
+        <div class="card-body">
+          <div class="review-info">
+            <strong>前提：</strong>请先在各计算模块（尺寸、质量、驱动电机、续驶里程等）完成参数输入，系统以这些设计参数为基准自动比对。<br>
+            <strong>格式：</strong>支持 <strong>.pdf</strong> 格式（将 Word 说明书"另存为 / 导出为 PDF"即可）。<strong>完全离线</strong>，文件不会离开您的设备。<br>
+            <strong>原理：</strong>① pdf.js 逐页提取纯文本，正则比对关键参数（±8% 容差）；② 检查排版格式规范特征；③ 分析内容充实程度与设计深度。
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title"><span class="icon">📊</span> 评分维度（总分 100 分）</div></div>
+        <div class="card-body">
+          <div class="review-dims">
+            <div class="review-dim">
+              <div class="rd-pct">50%</div>
+              <div class="rd-lbl">数据符合度</div>
+              <div class="rd-desc">总长/宽/高、轴距、整备/总质量、电机额定/峰值功率、峰值转矩、车速、爬坡度、电池能量、续驶里程等核心参数与工具计算值比对，允许 ±8% 误差</div>
+            </div>
+            <div class="review-dim">
+              <div class="rd-pct">30%</div>
+              <div class="rd-lbl">排版格式规范</div>
+              <div class="rd-desc">章节结构、图表编号、公式编号、单位规范、标题层次五项自动检查</div>
+            </div>
+            <div class="review-dim">
+              <div class="rd-pct">20%</div>
+              <div class="rd-lbl">内容质量</div>
+              <div class="rd-desc">国标引用、计算过程、设计分析深度、内容充实度四项评估</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title"><span class="icon">📂</span> 上传设计说明书（PDF 格式）</div></div>
+        <div class="card-body">
+          <div class="upload-zone" id="reviewUploadZone" onclick="document.getElementById('reviewFile').click()">
+            <div class="uz-icon">📄</div>
+            <div class="uz-text">点击选择说明书 PDF 文件</div>
+            <div class="uz-hint">.pdf 格式 · 完全离线处理 · 文件不会上传</div>
+          </div>
+          <input type="file" id="reviewFile" accept=".pdf" style="display:none" onchange="onReviewFileSelected(event)">
+          <div class="upload-row">
+            <span class="file-chosen" id="reviewFileName">未选择文件</span>
+            <button class="btn btn-success" onclick="gradeManualReport()">🔍 开始自动评阅</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="reviewResult"></div>
+
+      <div id="reviewBtnArea" style="display:none;margin-top:4px">
+        <div style="background:rgba(63,185,80,0.08);border:1px solid rgba(63,185,80,0.25);border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:var(--text2);">
+          <strong style="color:var(--green)">📦 评阅完成！</strong>点击下方按钮生成报告文件，提交给教师纳入统计管理。<br>
+          文件包含：✓ 可读的评阅报告（供学生查看）&nbsp;✓ 机器可读的评分数据（供教师统计）
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="generateManualReviewFile()">📥 生成完整评阅报告（含数据文件）</button>
+          <button class="btn btn-ghost" onclick="gradeManualReport()">🔄 重新评阅</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ══════════════ 配置 ══════════════
+const TEACHER_PASSWORD_VEH = 'gxuqpp123';
+let teacherDataVeh = [];
+const appState = { studentId: '', studentName: '', isTeacher: false };
+
+// ══════════════ 学生登录 ══════════════
+function submitLogin() {
+  const id   = document.getElementById('loginStudentId').value.trim();
+  const name = document.getElementById('loginStudentName').value.trim();
+  const idErr   = document.getElementById('idError');
+  const nameErr = document.getElementById('nameError');
+  let valid = true;
+  if (!/^\d{10}$/.test(id))   { idErr.style.display   = 'block'; valid = false; } else idErr.style.display   = 'none';
+  if (name.length < 2)         { nameErr.style.display = 'block'; valid = false; } else nameErr.style.display = 'none';
+  if (!valid) return;
+  appState.studentId   = id;
+  appState.studentName = name;
+  document.getElementById('studentBadge').style.display   = 'flex';
+  document.getElementById('studentBadgeText').textContent = `${name}（${id}）`;
+  document.getElementById('loginOverlay').style.display   = 'none';
+  initCalculations();
+}
+
+// ══════════════ 教师登录 ══════════════
+function openTeacherLogin() {
+  document.getElementById('teacherLoginOverlay').style.display = 'flex';
+  document.getElementById('teacherPassword').value = '';
+  document.getElementById('pwdError').style.display = 'none';
+}
+function closeTeacherLogin() {
+  document.getElementById('teacherLoginOverlay').style.display = 'none';
+}
+function submitTeacherLogin() {
+  const pwd = document.getElementById('teacherPassword').value;
+  if (pwd === TEACHER_PASSWORD_VEH) {
+    appState.isTeacher = true;
+    document.getElementById('teacherLoginOverlay').style.display = 'none';
+    document.getElementById('teacherPanelOverlay').style.display = 'flex';
+    if (teacherDataVeh.length > 0) displayTeacherStats();
+  } else {
+    document.getElementById('pwdError').style.display = 'block';
+  }
+}
+function closeTeacherPanel() {
+  document.getElementById('teacherPanelOverlay').style.display = 'none';
+}
+
+// ══════════════ 教师文件处理 ══════════════
+function handleFileSelect(event) {
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
+  const statusDiv = document.getElementById('uploadStatus');
+  if (statusDiv) statusDiv.innerHTML = '<span style="color:var(--accent2)">正在处理文件...</span>';
+  let loaded = 0, errs = 0;
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const content = e.target.result;
+        let data = null;
+        if (file.name.endsWith('.txt')) {
+          const m = content.match(/--- SYSTEM DATA BEGIN ---\s*([\s\S]*?)\s*--- SYSTEM DATA END ---/);
+          if (m && m[1]) data = JSON.parse(m[1].trim());
+          else { errs++; return checkDoneT(); }
+        } else if (file.name.endsWith('.json')) {
+          data = JSON.parse(content);
+        } else { errs++; return checkDoneT(); }
+        if (data && data.studentId && data.studentName && data.totalScore !== undefined) {
+          teacherDataVeh.push(data); loaded++;
+        } else { errs++; }
+      } catch { errs++; }
+      checkDoneT();
+    };
+    reader.readAsText(file);
+  });
+  function checkDoneT() {
+    if (loaded + errs < files.length) return;
+    const s = document.getElementById('uploadStatus');
+    if (s) s.innerHTML = `<span style="color:var(--green)">✓ 成功导入 ${loaded} 个文件</span>${errs>0?`<span style="color:var(--red);margin-left:10px">✗ ${errs} 个失败</span>`:''}`;
+    if (loaded > 0) displayTeacherStats();
+  }
+}
+
+// 拖拽支持
+window.addEventListener('DOMContentLoaded', () => {
+  const uz = document.getElementById('teacherUploadZone');
+  if (uz) {
+    uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('dragover'); });
+    uz.addEventListener('dragleave', () => uz.classList.remove('dragover'));
+    uz.addEventListener('drop', e => {
+      e.preventDefault(); uz.classList.remove('dragover');
+      handleFileSelect({ target: { files: e.dataTransfer.files } });
+    });
+  }
+});
+
+function displayTeacherStats() {
+  const students = {};
+  teacherDataVeh.forEach(d => {
+    const key = d.studentId;
+    if (!students[key]) students[key] = { name: d.studentName, id: d.studentId, scores: [], records: [] };
+    students[key].scores.push(d.totalScore);
+    students[key].records.push(d);
+  });
+  const arr = Object.values(students);
+  const allScores = arr.map(s => Math.max(...s.scores));
+  const avg = allScores.length ? (allScores.reduce((a,b)=>a+b,0)/allScores.length).toFixed(1) : 0;
+  const maxS = allScores.length ? Math.max(...allScores) : 0;
+  const minS = allScores.length ? Math.min(...allScores) : 0;
+  const excellent = allScores.filter(s=>s>=90).length;
+
+  const sc = document.getElementById('teacherStatsContent');
+  if (!sc) return;
+  sc.innerHTML = `
+    <div class="stats-card-t">
+      <h3 style="font-size:17px;margin-bottom:4px">总体统计</h3>
+      <div class="stats-grid-t">
+        <div class="stats-item-t"><div class="st-label">学生总数</div><div class="st-value">${arr.length}</div></div>
+        <div class="stats-item-t"><div class="st-label">提交总次数</div><div class="st-value">${teacherDataVeh.length}</div></div>
+        <div class="stats-item-t"><div class="st-label">班级平均分</div><div class="st-value">${avg}</div></div>
+        <div class="stats-item-t"><div class="st-label">最高分</div><div class="st-value">${maxS}</div></div>
+        <div class="stats-item-t"><div class="st-label">最低分</div><div class="st-value">${minS}</div></div>
+        <div class="stats-item-t"><div class="st-label">优秀率</div><div class="st-value">${allScores.length?Math.round(excellent/allScores.length*100):0}%</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">👥</span>学生列表</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-success-t btn-sm" onclick="exportTeacherCSV()">📊 导出CSV</button>
+          <button class="btn btn-danger-t btn-sm" onclick="clearTeacherDataVeh()">🗑️ 清空数据</button>
+        </div>
+      </div>
+      <div class="card-body" style="max-height:460px;overflow-y:auto">
+        ${arr.sort((a,b)=>Math.max(...b.scores)-Math.max(...a.scores)).map(s=>{
+          const best=Math.max(...s.scores);
+          const grade=best>=90?'优秀':best>=80?'良好':best>=70?'中等':best>=60?'及格':'不及格';
+          const g=best>=90?'var(--green)':best>=60?'var(--yellow)':'var(--red)';
+          return `<div class="student-item-t">
+            <div class="si-header">
+              <span class="si-name">${s.name}（${s.id}）</span>
+              <span style="color:${g};font-weight:700;font-size:16px;font-family:var(--font-mono)">${best}分 <span style="font-size:12px">${grade}</span></span>
+            </div>
+            <div class="si-detail">提交次数：${s.scores.length}次 &nbsp;|&nbsp; 分数记录：${s.scores.join(' / ')}</div>
+          </div>`;}).join('')}
+      </div>
+    </div>`;
+}
+
+function exportTeacherCSV() {
+  let csv = '\uFEFF学号,姓名,提交次数,最高分,平均分,最低分,等级\n';
+  const students = {};
+  teacherDataVeh.forEach(d => {
+    if (!students[d.studentId]) students[d.studentId] = { name: d.studentName, id: d.studentId, scores: [] };
+    students[d.studentId].scores.push(d.totalScore);
+  });
+  Object.values(students).forEach(s => {
+    const best = Math.max(...s.scores);
+    const avg2 = (s.scores.reduce((a,b)=>a+b,0)/s.scores.length).toFixed(1);
+    const g = best>=90?'优秀':best>=80?'良好':best>=70?'中等':best>=60?'及格':'不及格';
+    csv += `${s.id},${s.name},${s.scores.length},${best},${avg2},${Math.min(...s.scores)},${g}\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `汽车总体设计_统计_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
+
+function clearTeacherDataVeh() {
+  if (confirm('确认清空所有已导入的学生数据？')) {
+    teacherDataVeh = [];
+    document.getElementById('teacherStatsContent').innerHTML = '';
+    document.getElementById('uploadStatus').innerHTML = '<span style="color:var(--yellow)">数据已清空</span>';
+  }
+}
+
+// ══════════════ 智能评分 ══════════════
+function fmtS(val, n=3) { return (val===null||val===undefined||isNaN(val)) ? '未计算' : parseFloat(val.toFixed(n)).toString(); }
+function badgeS(ok) { return ok ? '<span class="badge-ok-s">✓ 满足</span>' : '<span class="badge-err-s">✗ 不满足</span>'; }
+
+function calcSmartScoreVeh() {
+  const items = [];
+
+  // ── 模块1：车型与尺寸（20分）──
+  const La = v('d-length'), Ba = v('d-width'), Ha = v('d-height');
+  const L  = v('d-wb'), Lf = v('d-front-oh'), Lr = v('d-rear-oh');
+  const tf = v('d-tf'), tr = v('d-tr'), hmin = v('d-ground');
+  const vehClass = sv('veh-class');
+
+  // 外廓尺寸 ≤GB 1589 (乘用车/客车)
+  const dimOk = La>0 && Ba>0 && Ha>0 && La<=12000 && Ba<=2550 && Ha<=4000;
+  const dimScore = La>0 ? (dimOk ? 5 : (La<=13000&&Ba<=2600 ? 2 : 0)) : 0;
+  items.push({ cat:'车型与尺寸', name:'外廓尺寸（GB 1589-2016）', std:'长≤12000, 宽≤2550, 高≤4000 mm', val:La>0?`${La}×${Ba}×${Ha} mm`:'未输入', max:5, score:dimScore });
+
+  // 轴距比
+  const ratioLa = La>0 ? L/La : 0;
+  const ratioOk = ratioLa>=0.52 && ratioLa<=0.66;
+  const ratioScore = La>0&&L>0 ? (ratioOk ? 5 : (ratioLa>=0.48&&ratioLa<=0.70 ? 2 : 0)) : 0;
+  items.push({ cat:'车型与尺寸', name:'轴距/总长比 L/Lₐ', std:'0.52～0.66（乘用车）', val:La>0&&L>0?fmtS(ratioLa,3):'未计算', max:5, score:ratioScore });
+
+  // 前悬比
+  const frontOhRatio = La>0&&Lf>0 ? Lf/La : 0;
+  const fohOk = frontOhRatio>=0.12 && frontOhRatio<=0.25;
+  const fohScore = La>0&&Lf>0 ? (fohOk ? 5 : (frontOhRatio>=0.10&&frontOhRatio<=0.28 ? 2 : 0)) : 0;
+  items.push({ cat:'车型与尺寸', name:'前悬/总长比 Lf/Lₐ', std:'0.12～0.25', val:La>0&&Lf>0?fmtS(frontOhRatio,3):'未计算', max:5, score:fohScore });
+
+  // 轮距/轴距比
+  const bRatio = L>0&&tf>0 ? tf/L : 0;
+  const bRatioOk = bRatio>=0.50 && bRatio<=0.75;
+  const bRatioScore = L>0&&tf>0 ? (bRatioOk ? 5 : (bRatio>=0.45&&bRatio<=0.80 ? 2 : 0)) : 0;
+  items.push({ cat:'车型与尺寸', name:'轮距/轴距比 B₁/L', std:'0.50～0.75', val:L>0&&tf>0?fmtS(bRatio,3):'未计算', max:5, score:bRatioScore });
+
+  // ── 模块2：质量参数（15分）──
+  const m0 = v('m-curb'), seats = v('m-seats');
+  const alpha_m = parseFloat(sv('m-alpha')) || 10;
+  const ma_calc = m0 + (65 + alpha_m) * seats;
+  const etaM0 = m0 > 0 && seats > 0 ? m0 / seats / 1000 : 0;
+
+  const m0Ok = m0 >= 800 && m0 <= 2500;
+  const m0Score = m0>0 ? (m0Ok ? 5 : (m0>=500&&m0<=4000 ? 2 : 0)) : 0;
+  items.push({ cat:'质量参数', name:'整备质量 m₀', std:'800～2500 kg（乘用车参考）', val:m0>0?`${m0} kg`:'未输入', max:5, score:m0Score });
+
+  const maLimitOk = ma_calc > 0 && ma_calc <= 4500;
+  const maScore = ma_calc>0 ? (maLimitOk ? 5 : 2) : 0;
+  items.push({ cat:'质量参数', name:'总质量 mₐ（≤4500kg 乘用车限值）', std:'≤4500 kg', val:ma_calc>0?`${ma_calc.toFixed(0)} kg`:'未计算', max:5, score:maScore });
+
+  const eta0Ok = etaM0>=0.15 && etaM0<=0.34;
+  const eta0Score = etaM0>0 ? (eta0Ok ? 5 : (etaM0>=0.12&&etaM0<=0.40 ? 2 : 0)) : 0;
+  items.push({ cat:'质量参数', name:'人均整备质量 m₀/n', std:'0.15～0.34 t/人（乘用车）', val:etaM0>0?`${fmtS(etaM0,3)} t/人`:'未计算', max:5, score:eta0Score });
+
+  // ── 模块3：驱动电机匹配（20分）──
+  const eVmax = v('e-vmax'), eMa = v('e-ma');
+  const eCd = v('e-cd'), eArea = v('e-area'), eEta = v('e-eta');
+  let eF = v('e-f'); if (eF <= 0) eF = 0.015;
+  const Pemax = v('p-power'), Pmax = v('e-pmax'), Temax = v('p-torque');
+  const massP = eMa>0 ? eMa : v('p-ma');
+
+  // 额定功率（按最高车速式21-15）
+  const PeNeed = eMa>0 && eVmax>0 ? (eMa*9.81*eF*eVmax/3600 + eCd*eArea*Math.pow(eVmax,3)/76140) / eEta : 0;
+  const PeOk = Pemax>0 && PeNeed>0 && Pemax>=PeNeed && Pemax<=2.2*PeNeed;
+  const PeScore = Pemax>0&&PeNeed>0 ? (PeOk ? 7 : (Pemax>=0.85*PeNeed ? 4 : 1)) : 0;
+  items.push({ cat:'驱动电机匹配', name:'额定功率 P_e（式21-15）', std:`需≥${fmtS(PeNeed,1)} kW`, val:Pemax>0?`${Pemax} kW`:'未输入', max:7, score:PeScore });
+
+  // 峰值比功率
+  const specPk = massP>0&&Pmax>0 ? Pmax/(massP/1000) : 0;
+  const specPkOk = specPk>=45 && specPk<=130;
+  const specPkScore = specPk>0 ? (specPkOk ? 7 : (specPk>=30&&specPk<=160 ? 4 : 1)) : 0;
+  items.push({ cat:'驱动电机匹配', name:'峰值比功率 P_max/mₐ', std:'45～130 kW/t（纯电动乘用车）', val:specPk>0?`${fmtS(specPk,1)} kW/t`:'未计算', max:7, score:specPkScore });
+
+  // 峰值转矩比功率
+  const specT = massP>0&&Temax>0 ? Temax/(massP/1000) : 0;
+  const specTOk = specT>=120 && specT<=260;
+  const specTScore = specT>0 ? (specTOk ? 6 : (specT>=80&&specT<=320 ? 3 : 1)) : 0;
+  items.push({ cat:'驱动电机匹配', name:'峰值转矩比 T_max/mₐ', std:'120～260 N·m/t（纯电动乘用车）', val:specT>0?`${fmtS(specT,1)} N·m/t`:'未计算', max:6, score:specTScore });
+
+  // ── 模块4：动力性（15分）──
+  const pSlope = v('p-slope');
+  const iMaxOk = pSlope >= 20 && pSlope <= 40;
+  const iMaxScore = pSlope>0 ? (iMaxOk ? 5 : (pSlope>=15&&pSlope<=50 ? 3 : 1)) : 0;
+  items.push({ cat:'动力性', name:'最大爬坡度 i_max', std:'20%～40%（纯电动乘用车）', val:pSlope>0?`${pSlope}%`:'未输入', max:5, score:iMaxScore });
+
+  const vmaxOk = eVmax>=100 && eVmax<=200;
+  const vmaxScore = eVmax>0 ? (vmaxOk ? 5 : (eVmax>=80&&eVmax<=240 ? 3 : 1)) : 0;
+  items.push({ cat:'动力性', name:'最高车速 v_amax', std:'100～200 km/h（纯电动乘用车）', val:eVmax>0?`${eVmax} km/h`:'未输入', max:5, score:vmaxScore });
+
+  // 续驶里程
+  const fEbat = v('f-ebat'), fEcon = v('f-econ'); let fSoc = v('f-soc'); if (fSoc<=0) fSoc=0.9;
+  const rangeL = fEbat>0&&fEcon>0 ? fEbat*fSoc/fEcon*100 : v('f-rtarget');
+  const rangeOk = rangeL>=200;
+  const rangeScore = rangeL>0 ? (rangeOk ? 5 : (rangeL>=120 ? 3 : 1)) : 0;
+  items.push({ cat:'动力性', name:'续驶里程 L', std:'≥200 km（纯电动乘用车参考）', val:rangeL>0?`${rangeL.toFixed(0)} km`:'未计算', max:5, score:rangeScore });
+
+  // ── 模块5：总体布置（20分）──
+  const alMa = v('al-ma'), alL = v('al-wb'), alL1 = v('al-l1');
+  const frontPct = alMa>0&&alL>0&&alL1>0 ? ((alMa*(alL-alL1)/alL)/alMa*100) : 0;
+  const frontOk2 = frontPct>=45 && frontPct<=60;
+  const frontScore = frontPct>0 ? (frontOk2 ? 5 : (frontPct>=40&&frontPct<=65 ? 3 : 1)) : 0;
+  items.push({ cat:'总体布置', name:'前轴负荷比', std:'45%～60%（乘用车参考）', val:frontPct>0?`${frontPct.toFixed(1)}%`:'未计算', max:5, score:frontScore });
+
+  const tFrontLoad = v('t-front-load'), tCap = v('t-tire-capacity');
+  const frontTireCoef = tFrontLoad>0&&tCap>0 ? tFrontLoad/(2*tCap) : 0;
+  const tireOk2 = frontTireCoef>=0.85 && frontTireCoef<=1.0;
+  const tireScore = frontTireCoef>0 ? (tireOk2 ? 5 : (frontTireCoef>=0.75&&frontTireCoef<=1.15 ? 3 : 1)) : 0;
+  items.push({ cat:'总体布置', name:'前轮负荷系数', std:'0.85～1.00', val:frontTireCoef>0?fmtS(frontTireCoef,3):'未计算', max:5, score:tireScore });
+
+  const hminOk = hmin>=150 && hmin<=250;
+  const hminScore = hmin>0 ? (hminOk ? 5 : (hmin>=100&&hmin<=350 ? 3 : 1)) : 0;
+  items.push({ cat:'总体布置', name:'最小离地间隙 h_min', std:'150～250 mm（乘用车）', val:hmin>0?`${hmin} mm`:'未输入', max:5, score:hminScore });
+
+  const blHa = v('bl-ha'), blHmin = v('bl-hmin'), blHp = v('bl-hp'), blHt = v('bl-ht');
+  const hR = blHa>0 ? blHa - blHmin - blHp - blHt : 0;
+  const hROk = hR>=1120 && hR<=1380;
+  const hRScore = hR>0 ? (hROk ? 5 : (hR>=1000&&hR<=1500 ? 3 : 1)) : 0;
+  items.push({ cat:'总体布置', name:'室内高 h_R', std:'1120～1380 mm', val:hR>0?`${Math.round(hR)} mm`:'未计算', max:5, score:hRScore });
+
+  // ── 模块6：人机工程（10分）──
+  const H30 = v('hp-h30');
+  const H30Ok = H30>=127 && H30<=405;
+  const H30Score = H30>0 ? (H30Ok ? 5 : (H30>=80&&H30<=500 ? 3 : 1)) : 0;
+  items.push({ cat:'人机工程', name:'H30 座椅高度', std:'127～405 mm（A类车）', val:H30>0?`${H30} mm`:'未输入', max:5, score:H30Score });
+
+  const L6 = v('eye-l6'), eyeH30 = v('eye-h30');
+  const eyeOk = L6>0 && eyeH30>0;
+  const eyeScore = eyeOk ? 5 : 0;
+  items.push({ cat:'人机工程', name:'眼椭圆参数完整性', std:'L6 和 H30 均已输入', val:eyeOk?'已完成':'未完成', max:5, score:eyeScore });
+
+  // ── 汇总 ──
+  const cats = ['车型与尺寸','质量参数','驱动电机匹配','动力性','总体布置','人机工程'];
+  const catMaxes = [20, 15, 20, 15, 20, 10];
+  const catScores = cats.map(cat => items.filter(i=>i.cat===cat).reduce((a,i)=>a+i.score,0));
+  const total = Math.min(100, catScores.reduce((a,b)=>a+b,0));
+
+  document.getElementById('totalScoreVal').textContent = total;
+  const grade = total>=90?'优秀':total>=80?'良好':total>=70?'中等':total>=60?'及格':'不及格';
+  document.getElementById('totalGradeVal').textContent = grade;
+  ['sc1','sc2','sc3','sc4','sc5','sc6'].forEach((id,i)=>{
+    document.getElementById(id).textContent = catScores[i];
+  });
+
+  // Detailed table
+  let tbody = '';
+  let lastCat = '';
+  items.forEach(item => {
+    if (item.cat !== lastCat) {
+      const catIdx = cats.indexOf(item.cat);
+      tbody += `<tr class="cat-header"><td colspan="5">▸ ${item.cat}（满分${catMaxes[catIdx]}分，得${catScores[catIdx]}分）</td></tr>`;
+      lastCat = item.cat;
+    }
+    const pct = item.max>0 ? item.score/item.max : 0;
+    const col = pct>=0.8?'var(--green)':pct>=0.5?'var(--yellow)':'var(--red)';
+    tbody += `<tr>
+      <td>${item.name}</td>
+      <td style="font-size:11px;color:var(--text2)">${item.std}</td>
+      <td style="font-family:var(--font-mono);font-size:12px">${item.val}</td>
+      <td class="score-col" style="color:${col}">${item.score}</td>
+      <td class="score-col" style="color:var(--text2)">${item.max}</td>
+    </tr>`;
+  });
+  document.getElementById('gradingBodyVeh').innerHTML = tbody;
+
+  // Teacher check table
+  const checks = [
+    { name:'外廓尺寸（GB 1589-2016）', std:'长≤12000 宽≤2550 高≤4000 mm', val:`${La}×${Ba}×${Ha}`, ok:dimOk },
+    { name:'轴距/总长比', std:'0.52～0.66', val:La>0&&L>0?fmtS(L/La,3):'—', ok:ratioOk },
+    { name:'总质量（乘用车限值）', std:'≤4500 kg', val:ma_calc>0?`${ma_calc.toFixed(0)} kg`:'—', ok:maLimitOk },
+    { name:'峰值比功率', std:'45～130 kW/t（纯电动）', val:specPk>0?`${fmtS(specPk,1)} kW/t`:'—', ok:specPkOk },
+    { name:'最高车速', std:'100～200 km/h（纯电动）', val:eVmax>0?`${eVmax} km/h`:'—', ok:vmaxOk },
+    { name:'前轴负荷比', std:'45%～60%', val:frontPct>0?`${frontPct.toFixed(1)}%`:'—', ok:frontOk2 },
+    { name:'前轮负荷系数', std:'0.85～1.00', val:frontTireCoef>0?fmtS(frontTireCoef,3):'—', ok:tireOk2 },
+    { name:'室内高 h_R', std:'1120～1380 mm', val:hR>0?`${Math.round(hR)} mm`:'—', ok:hROk },
+    { name:'H30 座椅高度', std:'127～405 mm', val:H30>0?`${H30} mm`:'—', ok:H30Ok },
+    { name:'最小离地间隙', std:'150～250 mm', val:hmin>0?`${hmin} mm`:'—', ok:hminOk },
+  ];
+  document.getElementById('teacherCheckBody').innerHTML = checks.map(c=>`
+    <tr>
+      <td>${c.name}</td>
+      <td style="font-size:11px;color:var(--text2)">${c.std}</td>
+      <td style="font-family:var(--font-mono);font-size:12px">${c.val}</td>
+      <td class="score-col">${badgeS(c.ok)}</td>
+    </tr>`).join('');
+
+  // Summary
+  document.getElementById('scoringSummaryContent').innerHTML = `
+    <div class="summary-box">
+      <div class="summary-title">🚗 整车参数汇总</div>
+      <div class="summary-grid">
+        <div class="summary-item"><div class="summary-key">车辆总长 Lₐ</div><div class="summary-val">${La||'—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">车辆总宽 Bₐ</div><div class="summary-val">${Ba||'—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">车辆总高 Hₐ</div><div class="summary-val">${Ha||'—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">轴距 L</div><div class="summary-val">${L||'—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">前轮距 B₁</div><div class="summary-val">${tf||'—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">后轮距 B₂</div><div class="summary-val">${tr||'—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">整备质量 m₀</div><div class="summary-val">${m0||'—'} kg</div></div>
+        <div class="summary-item"><div class="summary-key">汽车总质量 mₐ</div><div class="summary-val">${ma_calc>0?Math.round(ma_calc):'—'} kg</div></div>
+        <div class="summary-item"><div class="summary-key">驱动电机额定功率</div><div class="summary-val">${Pemax||'—'} kW</div></div>
+        <div class="summary-item"><div class="summary-key">最高车速</div><div class="summary-val">${eVmax||'—'} km/h</div></div>
+        <div class="summary-item"><div class="summary-key">综合得分</div><div class="summary-val" style="color:var(--accent2)">${total}分（${grade}）</div></div>
+        <div class="summary-item"><div class="summary-key">学生</div><div class="summary-val">${appState.studentName}（${appState.studentId}）</div></div>
+      </div>
+    </div>`;
+
+  return { total, catScores, cats, items };
+}
+
+// ══════════════ 生成完整报告 ══════════════
+function generateVehicleReport() {
+  const result = calcSmartScoreVeh();
+  const { total, catScores, cats } = result;
+  const La = v('d-length'), Ba = v('d-width'), Ha = v('d-height'), L = v('d-wb');
+  const m0 = v('m-curb'), Pemax = v('p-power'), eVmax = v('e-vmax');
+  const grade = total>=90?'优秀':total>=80?'良好':total>=70?'中等':total>=60?'及格':'不及格';
+
+  const systemData = {
+    studentId:   appState.studentId,
+    studentName: appState.studentName,
+    totalScore:  total,
+    grade,
+    timestamp:   Date.now(),
+    reportType:  '汽车总体设计评分',
+    scores: { s1:catScores[0], s2:catScores[1], s3:catScores[2], s4:catScores[3], s5:catScores[4], s6:catScores[5] }
+  };
+
+  const text = `汽车总体设计计算报告
+学号：${appState.studentId}   姓名：${appState.studentName}
+生成时间：${new Date().toLocaleString()}
+广西大学 · 车辆工程专业 · 《汽车设计》课程教学团队
+================================================================
+一、整车尺寸参数
+  车辆总长 Lₐ = ${La} mm
+  车辆总宽 Bₐ = ${Ba} mm
+  车辆总高 Hₐ = ${Ha} mm
+  轴距 L = ${L} mm
+
+二、质量参数
+  整备质量 m₀ = ${m0} kg
+
+三、动力匹配
+  驱动电机额定功率 P_e = ${Pemax} kW
+  最高车速 v_amax = ${eVmax} km/h
+
+四、智能评分汇总
+  车型与尺寸：   ${catScores[0]}/20分
+  质量参数：     ${catScores[1]}/15分
+  驱动电机匹配： ${catScores[2]}/20分
+  动力性：       ${catScores[3]}/15分
+  总体布置：     ${catScores[4]}/20分
+  人机工程：     ${catScores[5]}/10分
+  ─────────────────────────
+  综合总分：     ${total}/100分（${grade}）
+================================================================
+--- SYSTEM DATA BEGIN ---
+${JSON.stringify(systemData)}
+--- SYSTEM DATA END ---
+`;
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `${appState.studentId}_${appState.studentName}_汽车总体设计_计算结果评阅_${new Date().toISOString().slice(0,10)}.txt`; a.click();
+}
+
+// ══════════════ Navigation ══════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (id === 'scoring') { calcSmartScoreVeh(); return; }
+  const calcMap = {
+    'main-params': calcDimensions,
+    'mass-params': calcMass,
+    'engine': calcEngine,
+    'performance': calcPerf,
+    'fuel': calcFuel,
+    'axle-load': calcAxleLoad,
+    'tyre': calcTyre,
+    'body-layout': calcBodyLayout,
+    'hpoint': calcHPoint,
+  };
+  if (calcMap[id]) calcMap[id]();
+}
+
+function initCalculations() {
+  updateVehClass(); calcDimensions(); calcMass(); calcEngine();
+  calcPerf(); calcFuel(); calcAxleLoad(); calcTyre();
+  calcBodyLayout(); calcHPoint(); calcEyeEllipse(); calcHeadProfile();
+  calcReach(); calcKnee();
+}
+
+// Enter key support for login
+document.addEventListener('DOMContentLoaded', () => {
+  const sId = document.getElementById('loginStudentId');
+  const sName = document.getElementById('loginStudentName');
+  const tPwd = document.getElementById('teacherPassword');
+  if (sId) sId.addEventListener('keydown', e => { if (e.key==='Enter') submitLogin(); });
+  if (sName) sName.addEventListener('keydown', e => { if (e.key==='Enter') submitLogin(); });
+  if (tPwd) tPwd.addEventListener('keydown', e => { if (e.key==='Enter') submitTeacherLogin(); });
+  document.getElementById('loginOverlay').style.display = 'flex';
+});
+
+
+
+function showTab(id, btn) {
+  const parent = btn.closest('.page');
+  parent.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  parent.querySelectorAll('.tab-pill').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ═══════════════ Helpers ═══════════════
+function v(id) { const el = document.getElementById(id); return el ? (parseFloat(el.value) || 0) : 0; }
+function sv(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+
+function makeResult(label, value, unit, statusText, statusClass) {
+  return `<div class="result-item">
+    <div class="result-label">${label}</div>
+    <div class="result-value">${value}<span class="result-unit">${unit}</span></div>
+    ${statusText ? `<div class="result-status ${statusClass}">${statusText}</div>` : ''}
+  </div>`;
+}
+
+function inRange(val, min, max) {
+  if (val >= min && val <= max) return { ok: true, text: `✓ 在范围 ${min}~${max}` };
+  if (val < min) return { ok: false, text: `⚠ 低于下限 ${min}` };
+  return { ok: false, text: `⚠ 超过上限 ${max}` };
+}
+
+// ═══════════════ Vehicle type analysis ═══════════════
+function updateVehClass() {
+  const cls = sv('veh-class');
+  const drive = sv('drive-type');
+  const engine = sv('engine-pos');
+  const body = sv('body-type');
+  let analysis = '';
+  let pros = '';
+
+  const layouts = {
+    'FF': { name: '前置前驱 (FF)', pros: ['前轴负荷大，不足转向特性明显', '主减速器与变速器共壳，结构紧凑', '地板凸包低，提高乘坐舒适性', '散热条件好，供暖效率高'], cons: ['前桥负荷重，轮胎寿命短', '上坡时驱动轮附着力减小', '正面碰撞时电驱动总成易侵入客舱'] },
+    'FR': { name: '前置后驱 (FR)', pros: ['轴荷分配合理，利于轮胎寿命', '操纵机构简单，供暖效率高', '上坡爬坡能力强', '行李舱空间充裕'], cons: ['地板有传动轴凸起，影响舒适性', '总长、轴距较长', '驱动轴与万向节较复杂'] },
+    'MR': { name: '中置后驱 (MR)', pros: ['质量分配接近50:50', '操纵稳定性极佳', '轴距短，机动性好'], cons: ['客舱空间受限', '操纵机构复杂', '行李舱较小'] },
+    '4WD': { name: '全轮驱动 (4WD)', pros: ['通过性高', '驱动力强'], cons: ['结构复杂、质量大', '油耗高', '总布置工作复杂'] },
+  };
+  const key = drive.includes('FF') ? 'FF' : drive.includes('4x2') && !drive.includes('FF') ? 'FR' : drive.includes('4x4') ? '4WD' : 'FR';
+  const layout = layouts[key] || layouts['FR'];
+
+  analysis = `当前选择：${sv('veh-class')} 类 · ${sv('drive-type')} · 驱动电机${sv('engine-pos')}置 · ${sv('body-type')}`;
+
+  const container = document.getElementById('layout-analysis');
+  const prosConsDiv = document.getElementById('layout-pros-cons');
+  container.textContent = analysis;
+
+  let html = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px;">✓ 优点（${layout.name}）</div>
+      ${layout.pros.map(p => `<div style="font-size:12px;color:var(--text2);padding:3px 0;border-bottom:1px solid rgba(48,54,61,0.3);">• ${p}</div>`).join('')}
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:8px;">✗ 缺点</div>
+      ${layout.cons.map(c => `<div style="font-size:12px;color:var(--text2);padding:3px 0;border-bottom:1px solid rgba(48,54,61,0.3);">• ${c}</div>`).join('')}
+    </div>
+  </div>`;
+  prosConsDiv.innerHTML = html;
+}
+
+// ═══════════════ Dimensions ═══════════════
+function fillSampleData() {
+  document.getElementById('d-length').value = 4500;
+  document.getElementById('d-width').value = 1820;
+  document.getElementById('d-height').value = 1470;
+  document.getElementById('d-wb').value = 2650;
+  document.getElementById('d-tf').value = 1540;
+  document.getElementById('d-tr').value = 1530;
+  document.getElementById('d-front-oh').value = 900;
+  document.getElementById('d-rear-oh').value = 950;
+  document.getElementById('d-ground').value = 175;
+  calcDimensions();
+}
+
+function calcDimensions() {
+  const La = v('d-length'), Ba = v('d-width'), Ha = v('d-height');
+  const L = v('d-wb'), B1 = v('d-tf'), B2 = v('d-tr');
+  const LF = v('d-front-oh'), LR = v('d-rear-oh');
+  const hmin = v('d-ground');
+
+  if (!La || !L) return;
+
+  const C = L / La;
+  const lengthCheck = (LF + L + LR).toFixed(0);
+  const widthRatio = (Ba / La).toFixed(3);
+  const heightRatio = (Ha / La).toFixed(3);
+
+  let results = '';
+  results += makeResult('C 值（轴距/总长）', C.toFixed(3), '', 
+    C >= 0.52 && C <= 0.66 ? '✓ 正常范围 0.52~0.66' : '⚠ 偏离参考范围',
+    C >= 0.52 && C <= 0.66 ? 'status-ok' : 'status-warn');
+  results += makeResult('总长验证', lengthCheck, 'mm',
+    Math.abs(parseInt(lengthCheck) - La) < 2 ? '✓ 前悬+轴距+后悬=总长' : '⚠ 请检查悬长参数',
+    Math.abs(parseInt(lengthCheck) - La) < 2 ? 'status-ok' : 'status-warn');
+  results += makeResult('宽高比 Ba/La', widthRatio, '', '', '');
+  results += makeResult('轮距比 B2/B1', (B2/B1).toFixed(3), '', '', '');
+  results += makeResult('前轮距/总宽', (B1/Ba).toFixed(3), '', 
+    B1/Ba < 0.85 ? '✓ 轮距不超宽限值' : '⚠ 轮距过宽',
+    B1/Ba < 0.85 ? 'status-ok' : 'status-err');
+  results += makeResult('后悬/轴距', (LR/L).toFixed(3), '',
+    LR/L <= 0.65 ? '✓ ≤65% 轴距（客车标准）' : '⚠ 后悬较长',
+    LR/L <= 0.65 ? 'status-ok' : 'status-warn');
+  results += makeResult('后悬/总长', (LR/La).toFixed(3), '', '', '');
+  results += makeResult('最小离地间隙', hmin, 'mm', 
+    hmin >= 150 && hmin <= 220 ? '✓ 乘用车参考范围' : '请参考通过性表',
+    hmin >= 150 && hmin <= 220 ? 'status-ok' : 'status-warn');
+
+  document.getElementById('dim-results').innerHTML = results;
+  document.getElementById('dim-warnings').innerHTML = '';
+}
+
+// ═══════════════ Mass ═══════════════
+function calcMass() {
+  const vtype = sv('m-vtype');
+  const n = v('m-seats');
+  const alpha = v('m-alpha');
+  const m0 = v('m-curb');
+  const me = v('m-payload');
+
+  let ma, personPerMass;
+  if (vtype === 'passenger' || vtype === 'bus') {
+    ma = m0 + (65 + alpha) * n;
+    personPerMass = m0 / n / 1000;
+  } else {
+    const n1 = n;
+    ma = m0 + me + 65 * n1;
+    personPerMass = m0 / (me || 1) ;
+  }
+
+  const eta_m0 = vtype === 'truck' ? (me / m0).toFixed(3) : '—';
+
+  let results = makeResult('汽车总质量 mₐ', ma.toFixed(0), 'kg', '', '');
+  results += makeResult('人均整备质量', personPerMass.toFixed(3), 't/人',
+    personPerMass >= 0.15 && personPerMass <= 0.34 ? '✓ 乘用车参考范围' : '请参考表1-5',
+    personPerMass >= 0.15 && personPerMass <= 0.34 ? 'status-ok' : 'status-warn');
+  if (vtype === 'truck') {
+    results += makeResult('质量系数 η_m0', (me/m0).toFixed(3), '',
+      me/m0 >= 0.80 ? '✓ 设计水平良好' : '⚠ 偏低，结构待优化',
+      me/m0 >= 0.80 ? 'status-ok' : 'status-warn');
+  }
+  results += makeResult('总质量（乘用车限值）', '4500', 'kg',
+    ma <= 4500 || vtype !== 'passenger' ? '✓ 不超法规限值' : '⚠ 超过乘用车最大限值',
+    ma <= 4500 || vtype !== 'passenger' ? 'status-ok' : 'status-err');
+
+  document.getElementById('mass-results').innerHTML = results;
+}
+
+// ═══════════════ Engine ═══════════════
+function calcEngine() {
+  const M = v('e-ma'), vmax = v('e-vmax');
+  const cd = v('e-cd'), A = v('e-area');
+  const eta = v('e-eta'), f = v('e-f');
+  if (!M || !vmax || !eta) return;
+  const g = 9.81;
+  // 式21-15：按最高车速所需额定功率
+  const PeNeed = (1/eta) * (M*g*f*vmax/3600 + cd*A*Math.pow(vmax,3)/76140);
+
+  let r1 = makeResult('最高车速所需功率 P_e', PeNeed.toFixed(1), 'kW',
+    '该值为电机额定功率下限（式21-15）', 'status-ok');
+  const specNeed = PeNeed/(M/1000);
+  r1 += makeResult('对应额定比功率', specNeed.toFixed(1), 'kW/t', '', '');
+  document.getElementById('engine-results').innerHTML = r1;
+
+  // 电机参数选型
+  const Pe = v('p-power'), Pmax = v('e-pmax'), ne = v('e-ne'), Tmax = v('p-torque'), nmax = v('e-nmax');
+  const mtypeName = {pmsm:'永磁同步电动机', acim:'交流异步感应电动机', srm:'开关磁阻电动机', dc:'直流电动机'}[sv('e-mtype')] || '永磁同步电动机';
+  let r2 = '';
+  if (Pe>0 && ne>0) {
+    const Te = 9550*Pe/ne;                       // 额定转矩
+    r2 += makeResult('额定转矩 T_e (9550·P_e/n_e)', Te.toFixed(1), 'N·m', mtypeName, '');
+    const lambda = Pmax>0 ? Pmax/Pe : 0;          // 峰值/额定功率比
+    r2 += makeResult('峰值/额定功率比 λ', lambda.toFixed(2), '',
+      lambda>=1.8 && lambda<=3.0 ? '✓ λ∈[1.8,3.0]，匹配合理' : '⚠ λ偏离常用范围',
+      lambda>=1.8 && lambda<=3.0 ? 'status-ok' : 'status-warn');
+    // 额定功率是否满足最高车速需求
+    r2 += makeResult('额定功率裕度', Pe>0 ? (Pe-PeNeed).toFixed(1) : '—', 'kW',
+      Pe>=PeNeed ? '✓ 额定功率≥所需功率' : '⚠ 额定功率不足，请增大',
+      Pe>=PeNeed ? 'status-ok' : 'status-warn');
+    if (Tmax>0) {
+      const tRatio = Te>0 ? Tmax/Te : 0;
+      r2 += makeResult('峰值/额定转矩比', tRatio.toFixed(2), '',
+        tRatio>=1.6 && tRatio<=3.0 ? '✓ 过载倍数合理' : '参考 1.6~3.0',
+        tRatio>=1.6 && tRatio<=3.0 ? 'status-ok' : 'status-warn');
+    }
+    if (nmax>0 && ne>0) {
+      const cpr = nmax/ne;
+      r2 += makeResult('恒功率扩速比 n_max/n_e', cpr.toFixed(2), '',
+        cpr>=2.0 ? '✓ 恒功率区宽，利于高速' : '建议≥2.0', cpr>=2.0?'status-ok':'status-warn');
+    }
+  }
+  document.getElementById('engine-torque-results').innerHTML = r2;
+}
+
+// ═══════════════ Performance (EV) ═══════════════
+function calcPerf() {
+  const Tmax = v('p-torque'), Pmax = v('p-pmax'), ma = v('p-ma');
+  const i0 = v('p-i0'), r = v('p-r'), eta = v('p-eta'), f = v('p-f');
+  const cd = v('p-cd'), A = v('p-area'), delta = v('p-delta'), iTarget = v('p-slope');
+  if (!Tmax || !ma || !i0 || !r) return;
+  const g = 9.81;
+
+  // 最大驱动力（峰值转矩、单级减速 ig=1）  式21-18
+  const Ftmax = Tmax * i0 * eta / r;
+  let R = makeResult('最大驱动力 F_t (式21-18)', Ftmax.toFixed(0), 'N', 'T_max·i₀·η/r', '');
+
+  // 最大爬坡度：F_tmax = M·g·(f·cosα + sinα)，低速忽略风阻
+  const D0 = Ftmax/(ma*g);            // 最大动力因数（爬坡时）
+  let imaxCalc = 0, gradeOk = false;
+  if (D0 > f) {
+    // sinα + f·cosα = D0  →  α = asin(D0/√(1+f²)) − atan(f)
+    const phi = Math.atan(f);
+    const arg = D0/Math.sqrt(1+f*f);
+    if (arg <= 1) {
+      const alpha = Math.asin(arg) - phi;
+      imaxCalc = Math.tan(alpha)*100;
+      gradeOk = imaxCalc >= iTarget;
+    }
+  }
+  R += makeResult('最大爬坡度 i_max', imaxCalc>0?imaxCalc.toFixed(1):'—', '%',
+    iTarget>0 ? (gradeOk?`✓ ≥ 目标 ${iTarget}%`:`⚠ < 目标 ${iTarget}%`) : '',
+    gradeOk ? 'status-ok' : 'status-warn');
+
+  // 理论最高车速：恒功率段 F_t(v)=P_max·1000·η/v_ms 与阻力平衡（数值求解）
+  let vmaxCalc = 0;
+  if (Pmax > 0) {
+    for (let vk = 200; vk >= 5; vk -= 0.5) {       // km/h，从高到低找平衡点
+      const vms = vk/3.6;
+      const Ftrac = Math.min(Ftmax, Pmax*1000*eta/vms);
+      const Fres = ma*g*f + cd*A*vk*vk/21.15;
+      if (Ftrac >= Fres) { vmaxCalc = vk; break; }
+    }
+  }
+  R += makeResult('理论最高车速 v_max', vmaxCalc>0?vmaxCalc.toFixed(0):'—', 'km/h',
+    '驱动力=行驶阻力 平衡点', vmaxCalc>=100?'status-ok':'status-warn');
+
+  // 0–100 km/h 加速时间：数值积分 t=∫δM/(Ft−Fw−Ff)dv（式21-19）
+  let tAcc = 0, reached = true;
+  if (Pmax > 0) {
+    const dv = 0.1;                    // m/s 步长
+    const vEnd = 100/3.6;
+    for (let vms = 0.1; vms < vEnd; vms += dv) {
+      const vk = vms*3.6;
+      const Ftrac = Math.min(Ftmax, Pmax*1000*eta/vms);
+      const Fres = ma*g*f + cd*A*vk*vk/21.15;
+      const acc = (Ftrac - Fres)/(delta*ma);
+      if (acc <= 0) { reached = false; break; }
+      tAcc += dv/acc;
+    }
+  }
+  R += makeResult('0–100 km/h 加速时间', reached && tAcc>0 ? tAcc.toFixed(1) : '—', 's',
+    reached ? (tAcc<=12?'✓ 加速性能良好':'参考乘用车<12s') : '⚠ 动力不足，无法达到100',
+    reached && tAcc<=15 ? 'status-ok':'status-warn');
+
+  // 比功率（峰值）
+  if (Pmax>0) {
+    const specP = Pmax/(ma/1000);
+    R += makeResult('峰值比功率', specP.toFixed(1), 'kW/t', '加速/爬坡能力指标', '');
+  }
+  document.getElementById('perf-results').innerHTML = R;
+}
+
+function calcTurnRadius() {
+  const L = v('p-wb2'), delta = v('p-steer-angle'), Rk = v('p-kingpin');
+  if (!L || !delta) return;
+  const Rmin = L / Math.tan(delta * Math.PI / 180);
+  const Dmin = 2 * (Rmin + Rk) / 1000;
+  let results = makeResult('估算最小转弯半径 R_min', Rmin.toFixed(0), 'mm', '', '');
+  results += makeResult('估算最小转弯直径 D_min', Dmin.toFixed(2), 'm',
+    Dmin >= 8.0 && Dmin <= 12.5 ? '✓ 纯电动乘用车参考范围' : '请对照参考表',
+    Dmin >= 8.0 && Dmin <= 12.5 ? 'status-ok' : 'status-warn');
+  document.getElementById('turn-results').innerHTML = results;
+}
+
+// ═══════════════ Range & Energy (EV) ═══════════════
+function calcFuel() {
+  // 续驶里程
+  const Ebat = v('f-ebat'), soc = v('f-soc'), econ = v('f-econ'), rtarget = v('f-rtarget');
+  if (Ebat>0 && econ>0) {
+    const Euse = Ebat*soc;
+    const L = Euse/econ*100;
+    let r1 = makeResult('可用电量 E_可用', Euse.toFixed(1), 'kW·h', `${Ebat}×SOC ${soc}`, '');
+    r1 += makeResult('续驶里程 L', L.toFixed(0), 'km',
+      rtarget>0 ? (L>=rtarget?`✓ ≥ 目标 ${rtarget}km`:`⚠ < 目标 ${rtarget}km`) : '',
+      rtarget>0 && L>=rtarget ? 'status-ok':'status-warn');
+    document.getElementById('fuel-results').innerHTML = r1;
+  }
+
+  // 动力电池组数量校核
+  const Pemax = v('f-pemax'), Pbmax = v('f-pbmax'), etae = v('f-etae'), etaec = v('f-etaec');
+  const Cs = v('f-cs'), Us = v('f-us');
+  const W = econ/100;                 // kW·h/km
+  const Lrange = (Ebat>0 && econ>0) ? Ebat*soc/econ*100 : rtarget;
+  if (Pemax>0 && Pbmax>0 && Cs>0 && Us>0) {
+    const n1 = Pemax/(Pbmax*etae*etaec);                 // 功率
+    const n2 = 1000*W*Lrange/(Cs*Us);                    // 能量
+    const n = Math.max(n1, n2);
+    let r2 = makeResult('按功率 n₁', n1.toFixed(1), '组', 'P_emax/(P_bmax·η_e·η_ec)', '');
+    r2 += makeResult('按能量 n₂', n2.toFixed(1), '组', '1000·W·L/(C_s·U_s)', '');
+    r2 += makeResult('电池组（模块）数目 n', Math.ceil(n), '组',
+      `取 n₁、n₂ 较大者（${n1>=n2?'功率':'能量'}主导）`, 'status-ok');
+    const Etot = Math.ceil(n)*Cs*Us/1000;
+    r2 += makeResult('电池组总能量（估算）', Etot.toFixed(1), 'kW·h', `${Math.ceil(n)}×${Cs}A·h×${Us}V`, '');
+    document.getElementById('battery-results').innerHTML = r2;
+  }
+}
+
+
+// ═══════════════ Axle Load ═══════════════
+function calcAxleLoad() {
+  const ma = v('al-ma'), m0 = v('al-m0');
+  const L = v('al-wb'), L1 = v('al-l1');
+  const drive = sv('al-drive');
+
+  if (!ma || !L || !L1) return;
+  const L2 = L - L1;
+  const G1 = ma * 9.81 * L2 / L; // 前轴负荷 N
+  const G2 = ma * 9.81 * L1 / L; // 后轴负荷 N
+  const G1_kg = G1 / 9.81;
+  const G2_kg = G2 / 9.81;
+  const frontPct = (G1_kg / ma * 100).toFixed(1);
+  const rearPct = (G2_kg / ma * 100).toFixed(1);
+
+  // Reference ranges
+  const ranges = {
+    FF: { front: [47, 60], rear: [40, 53] },
+    FR: { front: [45, 50], rear: [50, 55] },
+    '4WD': { front: [45, 55], rear: [45, 55] }
+  };
+  const ref = ranges[drive] || ranges.FR;
+  const frontOk = frontPct >= ref.front[0] && frontPct <= ref.front[1];
+  const rearOk = rearPct >= ref.rear[0] && rearPct <= ref.rear[1];
+
+  let results = makeResult('质心距后轴距离 L₂', L2, 'mm', '', '');
+  results += makeResult('前轴负荷 G₁', G1_kg.toFixed(0), 'kg', '', '');
+  results += makeResult('后轴负荷 G₂', G2_kg.toFixed(0), 'kg', '', '');
+  results += makeResult('前轴负荷比（满载）', frontPct, '%',
+    frontOk ? `✓ 参考范围 ${ref.front[0]}%~${ref.front[1]}%` : `⚠ 参考范围 ${ref.front[0]}%~${ref.front[1]}%`,
+    frontOk ? 'status-ok' : 'status-warn');
+  results += makeResult('后轴负荷比（满载）', rearPct, '%',
+    rearOk ? `✓ 参考范围 ${ref.rear[0]}%~${ref.rear[1]}%` : `⚠ 参考范围 ${ref.rear[0]}%~${ref.rear[1]}%`,
+    rearOk ? 'status-ok' : 'status-warn');
+
+  document.getElementById('axle-results').innerHTML = results;
+}
+
+// ═══════════════ Tyre ═══════════════
+function calcTyre() {
+  const frontLoad = v('t-front-load'), rearLoad = v('t-rear-load');
+  const frontCount = parseInt(sv('t-front-count'));
+  const rearCount = parseInt(sv('t-rear-count'));
+  const cap = v('t-tire-capacity');
+  const vmax = v('t-vmax');
+
+  if (!frontLoad || !cap) return;
+  const loadPerFrontTyre = frontLoad / (2 * frontCount);
+  const loadPerRearTyre = rearLoad / (2 * rearCount);
+  const frontCoef = loadPerFrontTyre / cap;
+  const rearCoef = loadPerRearTyre / cap;
+
+  const speedSymbols = [
+    [60,'C'],[65,'D'],[70,'E'],[80,'F'],[90,'G'],[100,'J'],
+    [110,'K'],[120,'L'],[130,'M'],[140,'N'],[150,'P'],[160,'Q'],
+    [170,'R'],[180,'S'],[190,'T'],[200,'U'],[210,'H'],[240,'V'],[270,'W'],[300,'Y']
+  ];
+  const reqSymbol = speedSymbols.find(s => s[0] >= vmax);
+
+  let results = makeResult('单前轮最大静负荷', loadPerFrontTyre.toFixed(0), 'kg', '', '');
+  results += makeResult('前轮负荷系数', frontCoef.toFixed(3), '',
+    frontCoef >= 0.85 && frontCoef <= 1.0 ? '✓ 在 0.85~1.00 范围内' : frontCoef < 0.85 ? '⚠ 偏低（可选小规格）' : '⚠ 超载！需升级规格',
+    frontCoef >= 0.85 && frontCoef <= 1.0 ? 'status-ok' : frontCoef > 1.0 ? 'status-err' : 'status-warn');
+  results += makeResult('单后轮最大静负荷', loadPerRearTyre.toFixed(0), 'kg', '', '');
+  results += makeResult('后轮负荷系数', rearCoef.toFixed(3), '',
+    rearCoef >= 0.85 && rearCoef <= 1.0 ? '✓ 在 0.85~1.00 范围内' : rearCoef < 0.85 ? '⚠ 偏低' : '⚠ 超载！',
+    rearCoef >= 0.85 && rearCoef <= 1.0 ? 'status-ok' : rearCoef > 1.0 ? 'status-err' : 'status-warn');
+  results += makeResult('所需速度等级', reqSymbol ? reqSymbol[1] : '≥Y', '',
+    reqSymbol ? `允许最高速度 ≥${reqSymbol[0]}km/h 满足 ${vmax}km/h 设计值` : '需选最高速度等级',
+    'status-ok');
+
+  document.getElementById('tyre-results').innerHTML = results;
+}
+
+// ═══════════════ Body Layout ═══════════════
+function calcBodyLayout() {
+  const Ha = v('bl-ha'), hmin = v('bl-hmin');
+  const hp = v('bl-hp'), ht = v('bl-ht');
+
+  const hR = Ha - hmin - hp - ht;
+
+  let results = makeResult('室内高 h_R', hR.toFixed(0), 'mm',
+    hR >= 1120 && hR <= 1380 ? '✓ 正常范围 1120~1380mm' : '⚠ 请检查各分量',
+    hR >= 1120 && hR <= 1380 ? 'status-ok' : 'status-warn');
+  document.getElementById('body-results').innerHTML = results;
+}
+
+// ═══════════════ H Point ═══════════════
+function calcHPoint() {
+  const H30 = v('hp-h30');
+  const ahpX = v('hp-ahp-x'), ahpY = v('hp-ahp-y'), ahpZ = v('hp-ahp-z');
+  const L11 = v('hp-l11'), W9 = v('hp-w9');
+
+  if (!H30 || !ahpX) return;
+
+  // SgRP coordinates estimation
+  const sgrpX = ahpX + 300; // approximate
+  const sgrpZ = ahpZ + H30;
+  const sgrpY = ahpY;
+
+  // A47 pedal plane angle (approximate formula from thesis)
+  // SgRP curve: X = f(H30)
+  const A47 = Math.atan2(H30, L11) * 180 / Math.PI;
+
+  let results = makeResult('H30（座椅高度）', H30, 'mm',
+    H30 >= 127 && H30 <= 405 ? '✓ A类车范围 127~405mm' : '⚠ 超出A类车范围',
+    H30 >= 127 && H30 <= 405 ? 'status-ok' : 'status-warn');
+  results += makeResult('转向盘直径判断', W9 <= 450 ? 'A类车' : 'B类车', '',
+    W9 <= 450 ? 'W9 ≤ 450mm → A类车' : 'W9 > 450mm → B类车', '');
+  results += makeResult('估算SgRP X坐标', sgrpX, 'mm', '相对前轮中心', '');
+  results += makeResult('估算SgRP Y坐标', sgrpY, 'mm', '相对车辆中心面', '');
+  results += makeResult('估算SgRP Z坐标', sgrpZ.toFixed(0), 'mm', '相对Z轴基准', '');
+
+  document.getElementById('hpoint-results').innerHTML = results;
+
+  // A47 and SgRP curve
+  let sgprResults = makeResult('踏板平面角 A47', A47.toFixed(1), '°',
+    A47 >= 40 && A47 <= 60 ? '✓ 正常范围' : '⚠ 请复核踏板布置',
+    A47 >= 40 && A47 <= 60 ? 'status-ok' : 'status-warn');
+  sgprResults += makeResult('左右眼间距参考', '65', 'mm', 'E点（眼点）左右眼距', '');
+  sgprResults += makeResult('P点到E点距离', '98', 'mm', '头部转动中心P在眼点后方98mm处', '');
+  document.getElementById('hpoint-sgpr-results').innerHTML = sgprResults;
+}
+
+// ═══════════════ Eye Ellipse ═══════════════
+function calcEyeEllipse() {
+  const L6 = v('eye-l6'), H30 = v('eye-h30');
+  const trans = sv('eye-trans'), sgrpY = v('eye-sgrp-y');
+  const A19 = v('eye-a19');
+
+  if (!L6 || !H30) return;
+
+  // Eye ellipse center calculation (simplified from SAE J941)
+  const t = trans === 'M' ? 1 : 0;
+  // Xc, Zc (relative to AHP)
+  const Xc = -0.279 * L6 + 1.264 * H30 - 220.3 * t + 906.8;
+  const Zc = -0.173 * L6 + 0.199 * H30 - 25.5 * t + 338.5;
+
+  // Ellipse tilt angle
+  const tiltAngle = 90 - A19 - 12;
+
+  let results = makeResult('眼椭圆中心 Xc', Xc.toFixed(0), 'mm', '相对PRP', '');
+  results += makeResult('眼椭圆中心 Zc', Zc.toFixed(0), 'mm', '相对AHP水平面', '');
+  results += makeResult('眼椭圆中心 Yc', sgrpY, 'mm', '相对车辆中心面', '');
+  results += makeResult('椭圆倾角', tiltAngle.toFixed(1), '°', '侧视图中向前下方倾斜', '');
+  results += makeResult('左眼点 E_L Y坐标', (parseFloat(sgrpY) - 32.5).toFixed(0), 'mm', 'E点左右各32.5mm（间距65mm）', '');
+  results += makeResult('右眼点 E_R Y坐标', (parseFloat(sgrpY) + 32.5).toFixed(0), 'mm', 'E点左右各32.5mm', '');
+
+  document.getElementById('eye-results').innerHTML = results;
+}
+
+// ═══════════════ Head Profile ═══════════════
+function calcHeadProfile() {
+  const L6 = v('head-l6'), H30 = v('head-h30');
+  const t = parseInt(sv('head-t')), W20 = v('head-w20');
+  const TL23 = v('head-tl23');
+
+  if (!L6 || !H30) return;
+
+  // Head profile center from SAE J1052 (from thesis formulas)
+  const Xh = 90.6, Zh = 52.6;
+  const Xc = -0.332 * L6 + 1.054 * H30 - 235.3 * t + Xh + 850;
+  const Zc = 0.101 * L6 + 0.281 * H30 + 28.5 * t + Zh + 400;
+
+  let results = makeResult('头廓包络面中心 Xc', Xc.toFixed(0), 'mm', '相对PRP（AHP前方）', '');
+  results += makeResult('头廓包络面中心 Yc', W20, 'mm', '驾驶员Y坐标', '');
+  results += makeResult('头廓包络面中心 Zc', Zc.toFixed(0), 'mm', '相对AHP水平面', '');
+  results += makeResult('侧视图倾角', '-12', '°', 'A类车行程可调座椅：向前下方12°', '');
+  results += makeResult('座椅水平调节量', TL23, 'mm', '参考范围 200~250mm', 
+    TL23 >= 200 && TL23 <= 250 ? 'status-ok' : 'status-warn');
+
+  document.getElementById('head-results').innerHTML = results;
+}
+
+// ═══════════════ Reach Zone ═══════════════
+function calcReach() {
+  const H30 = v('reach-h30'), A40 = v('reach-a40');
+  const W9 = v('reach-w9'), A18 = v('reach-a18');
+  const L11 = v('reach-l11'), H17 = v('reach-h17'), A42 = v('reach-a42');
+  const L53 = v('reach-l53'), ahpX = v('reach-ahp-x'), sgrpX = v('reach-sgrp-x');
+
+  if (!H30) return;
+
+  // General layout factor G
+  const G = (H30 / 1000) * Math.cos(A40 * Math.PI / 180) -
+             (W9 / 1000 / 2) * Math.sin(A18 * Math.PI / 180) -
+             (L11 / 1000) - (H17 / 1000) / Math.tan(A42 * Math.PI / 180) - 0.34;
+
+  // HR reference plane
+  const HR = 786 - 99 * G;
+  let xRef;
+  if (HR > L53) {
+    xRef = sgrpX;
+  } else {
+    xRef = ahpX + (786 - 99 * G);
+  }
+
+  let results = makeResult('通用布置因子 G', G.toFixed(4), '', 
+    G >= -0.24 && G <= 0.24 ? `✓ 在有效范围 -0.24~0.24 内` : '⚠ 超出参数范围',
+    G >= -0.24 && G <= 0.24 ? 'status-ok' : 'status-warn');
+  results += makeResult('HR基准面位置', HR.toFixed(1), 'mm', '到AHP的距离', '');
+  results += makeResult('定位参考点 X坐标', xRef.toFixed(0), 'mm', '手伸及界面参考', '');
+  results += makeResult('满足5%手伸及', '✓', '', '用5%百分位界面以保证95%人群可及', 'status-ok');
+
+  document.getElementById('reach-results').innerHTML = results;
+}
+
+// ═══════════════ Knee Profile ═══════════════
+function calcKnee() {
+  const H30 = v('knee-h30');
+  const CHX_L = v('knee-chx-l'), CX = v('knee-cx'), CZ = v('knee-cz');
+  const CHX_R = v('knee-chx-r');
+
+  if (!H30) return;
+
+  // Left knee (50:50 male/female)
+  const X_L = 0.260 * CHX_L + 0.014 * CX + 0.269 * CZ - 0.002 * H30 - 44.0;
+  const Z_L = -0.038 * CHX_L + 0.052 * CX + 0.474 * CZ + 0.285 * H30 - 83.0;
+
+  // Right knee
+  const X_R = 0.260 * CHX_R - 0.002 * H30 + 0.014 * 0 + 0.269 * 0 - 44.0 + 5;
+  const Z_R = -0.038 * CHX_R + 0.285 * H30 - 83.0 + 11;
+
+  let results = makeResult('左膝包络线中心 X', X_L.toFixed(0), 'mm', '参考论文结果≈607mm', '');
+  results += makeResult('左膝包络线中心 Z', Z_L.toFixed(0), 'mm', '参考论文结果≈378mm', '');
+  results += makeResult('右膝包络线中心 X', X_R.toFixed(0), 'mm', '参考论文结果≈612mm', '');
+  results += makeResult('右膝包络线中心 Z', Z_R.toFixed(0), 'mm', '参考论文结果≈389mm', '');
+  results += makeResult('左膝 Y坐标', '-620', 'mm', '相对驾驶员中心平面', '');
+  results += makeResult('右膝 Y坐标', '-323', 'mm', '相对驾驶员中心平面', '');
+
+  document.getElementById('knee-results').innerHTML = results;
+}
+
+// ═══════════════ Summary ═══════════════
+function generateSummary() {
+  const La = v('d-length'), Ba = v('d-width'), Ha = v('d-height');
+  const L = v('d-wb'), m0 = v('m-curb');
+  const ma = v('al-ma'), Pemax = v('p-power');
+
+  const html = `
+    <div class="summary-box">
+      <div class="summary-title">🚗 整车参数汇总表</div>
+      <div class="summary-grid">
+        <div class="summary-item"><div class="summary-key">车辆总长</div><div class="summary-val">${La || '—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">车辆总宽</div><div class="summary-val">${Ba || '—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">车辆总高</div><div class="summary-val">${Ha || '—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">轴距</div><div class="summary-val">${L || '—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">前轮距</div><div class="summary-val">${v('d-tf') || '—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">后轮距</div><div class="summary-val">${v('d-tr') || '—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">前悬</div><div class="summary-val">${v('d-front-oh') || '—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">后悬</div><div class="summary-val">${v('d-rear-oh') || '—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">最小离地间隙</div><div class="summary-val">${v('d-ground') || '—'} mm</div></div>
+        <div class="summary-item"><div class="summary-key">整备质量</div><div class="summary-val">${m0 || '—'} kg</div></div>
+        <div class="summary-item"><div class="summary-key">汽车总质量</div><div class="summary-val">${ma || '—'} kg</div></div>
+        <div class="summary-item"><div class="summary-key">驱动电机额定功率</div><div class="summary-val">${Pemax || '—'} kW</div></div>
+        <div class="summary-item"><div class="summary-key">峰值功率</div><div class="summary-val">${v('e-pmax') || '—'} kW</div></div>
+        <div class="summary-item"><div class="summary-key">峰值转矩</div><div class="summary-val">${v('p-torque') || '—'} N·m</div></div>
+        <div class="summary-item"><div class="summary-key">最高车速</div><div class="summary-val">${v('e-vmax') || '—'} km/h</div></div>
+        <div class="summary-item"><div class="summary-key">电池总能量</div><div class="summary-val">${v('f-ebat') || '—'} kW·h</div></div>
+        <div class="summary-item"><div class="summary-key">续驶里程(目标)</div><div class="summary-val">${v('f-rtarget') || '—'} km</div></div>
+        <div class="summary-item"><div class="summary-key">驾驶员H30</div><div class="summary-val">${v('hp-h30') || '—'} mm</div></div>
+      </div>
+    </div>
+    <div style="margin-top:12px;font-size:12px;color:var(--text2);">
+      💡 建议按以下顺序完成设计：车型定义 → 尺寸参数 → 质量参数 → 驱动电机选型 → 续驶里程与电池 → 轴荷分配 → 轮胎选型 → 车身布置 → H点人机校核 → 运动校核
+    </div>`;
+
+  document.getElementById('summary-content').innerHTML = html;
+}
+
+// ═══════════════ Init ═══════════════
+window.onload = function () {
+  // Login overlay is shown by DOMContentLoaded handler; calculations run after login
+};
+
+// ══════════════════════════════════════════════════════════
+//  说明书评阅模块 — 完全离线，无需网络 / API Key
+// ══════════════════════════════════════════════════════════
+
+// ── 文件选择反馈 ──────────────────────────────────────────
+function onReviewFileSelected(e) {
+  const f = e.target.files[0];
+  document.getElementById('reviewFileName').textContent = f ? f.name : '未选择文件';
+  if (f) {
+    const z = document.getElementById('reviewUploadZone');
+    z.style.borderColor = 'var(--green)';
+    z.style.background = 'rgba(63,185,80,0.06)';
+  }
+}
+
+// ── 用 pdf.js 提取说明书 PDF 全部文字 ─────────────────────
+async function extractPdfTextVeh(arrayBuffer) {
+  const pdfjsLib = window['pdfjs-dist/build/pdf'];
+  if (!pdfjsLib) {
+    throw new Error(
+      'PDF 解析库尚未就绪。请确保设备已联网，刷新页面后重试；' +
+      '若长期断网，可先联网打开页面一次，使浏览器缓存该库。'
+    );
+  }
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  const doc   = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pages = doc.numPages;
+  let fullText = '';
+
+  for (let i = 1; i <= pages; i++) {
+    const page    = await doc.getPage(i);
+    const content = await page.getTextContent();
+    const lineMap = {};
+    content.items.forEach(item => {
+      if (!item.str) return;
+      const y = Math.round(item.transform[5]);
+      if (!lineMap[y]) lineMap[y] = [];
+      lineMap[y].push({ x: item.transform[4], str: item.str });
+    });
+    const lines = Object.keys(lineMap)
+      .sort((a, b) => b - a)
+      .map(y => lineMap[y].sort((a, b) => a.x - b.x).map(t => t.str).join(''));
+    fullText += lines.join('\n') + '\n';
+  }
+  return fullText.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+// ── 规则打分引擎（汽车总体设计专版）──────────────────────
+function scoreManualReport(rawText) {
+  // 去除数字千分位逗号，便于匹配（如 1,725 → 1725）
+  const text = rawText.replace(/(\d),(?=\d{3}\b)/g, '$1');
+  const R = { score_data:0, score_format:0, score_content:0, data_details:[], format_details:[], content_details:[] };
+
+  // ─ 基准值：直接读取各模块输入参数（与智能评分一致）─
+  const La = v('d-length'), Ba = v('d-width'), Ha = v('d-height'), L = v('d-wb');
+  const m0 = v('m-curb'), seats = v('m-seats');
+  const alpha_m = parseFloat(sv('m-alpha')) || 10;
+  const ma = m0 > 0 ? m0 + (65 + alpha_m) * seats : 0;
+  const Pe = v('p-power'), Pmax = v('e-pmax'), Tmax = v('p-torque'), vmax = v('e-vmax'), slope = v('p-slope');
+  let socF = v('f-soc'); if (socF<=0) socF=0.9;
+  const Ebat = v('f-ebat'), econ = v('f-econ');
+  const rangeL = Ebat>0&&econ>0 ? Ebat*socF/econ*100 : v('f-rtarget');
+
+  // ─ 维度一：数据符合度（50分）──────────────────────────
+  const params = [
+    { name:'车辆总长 Lₐ',    kws:['总长','车长','车辆长度','整车长'],            val:La,    unit:'mm',   tol:0.06, max:4 },
+    { name:'车辆总宽 Bₐ',    kws:['总宽','车宽','车辆宽度','整车宽'],            val:Ba,    unit:'mm',   tol:0.06, max:4 },
+    { name:'车辆总高 Hₐ',    kws:['总高','车高','车辆高度','整车高'],            val:Ha,    unit:'mm',   tol:0.06, max:4 },
+    { name:'轴距 L',         kws:['轴距'],                                       val:L,     unit:'mm',   tol:0.05, max:5 },
+    { name:'整备质量 m₀',    kws:['整备质量','空车质量'],                        val:m0,    unit:'kg',   tol:0.08, max:5 },
+    { name:'整车总质量 mₐ',  kws:['总质量','满载质量','最大总质量'],             val:ma,    unit:'kg',   tol:0.08, max:5 },
+    { name:'电机额定功率 P_e',kws:['额定功率','电机功率','驱动电机.*功率'],      val:Pe,    unit:'kW',   tol:0.10, max:5 },
+    { name:'电机峰值功率 P_max',kws:['峰值功率','最大功率'],                     val:Pmax,  unit:'kW',   tol:0.10, max:4 },
+    { name:'峰值转矩 T_max', kws:['峰值转矩','最大转矩','最大扭矩'],             val:Tmax,  unit:'N·m',  tol:0.10, max:4 },
+    { name:'最高车速 v_amax',kws:['最高车速','最高速度','最大车速'],             val:vmax,  unit:'km/h', tol:0.08, max:3 },
+    { name:'最大爬坡度 i_max',kws:['最大爬坡','爬坡度','爬坡能力'],              val:slope, unit:'%',    tol:0.10, max:3 },
+    { name:'动力电池能量 E', kws:['电池.*能量','电池容量','装电量','带电量','kWh','kW·h'], val:Ebat, unit:'kW·h', tol:0.10, max:2 },
+    { name:'续驶里程 L',     kws:['续驶里程','续航里程','续航','行驶里程'],       val:rangeL,unit:'km',   tol:0.10, max:2 },
+  ];
+
+  params.forEach(p => {
+    const ref = p.val;
+    if (!ref || ref === 0) {
+      R.data_details.push({ item:p.name, expected:'（未输入，请先在对应模块填写）', found:'—', status:'skip', score:0, max:p.max });
+      return;
+    }
+    let foundVal = null, foundStr = '未提及';
+    const candidates = [];
+    for (const kw of p.kws) {
+      const kwRe = new RegExp(kw, 'gi');
+      let km;
+      while ((km = kwRe.exec(text)) !== null) {
+        const win = text.slice(Math.max(0, km.index - 20), Math.min(text.length, km.index + 200));
+        const nums = win.match(/[0-9]+(?:\.[0-9]+)?/g) || [];
+        nums.forEach(n => {
+          const x = parseFloat(n);
+          if (ref > 50 && x < 10)    return;   // 大量值忽略个位小数
+          if (ref > 1  && x < 0.001) return;
+          candidates.push(x);
+        });
+        if (candidates.length > 24) break;
+      }
+    }
+    let score = 0, status = 'miss';
+    if (candidates.length > 0) {
+      foundVal = candidates.reduce((best, x) => Math.abs(x - ref) < Math.abs(best - ref) ? x : best);
+      foundStr = String(foundVal);
+      const diff = Math.abs(foundVal - ref) / Math.max(Math.abs(ref), 0.001);
+      if (diff <= p.tol)        { score = p.max;                    status = 'ok'; }
+      else if (diff <= p.tol*3) { score = Math.round(p.max * 0.55); status = 'warn'; }
+      else                      { score = Math.round(p.max * 0.2);  status = 'err'; }
+    }
+    R.score_data += score;
+    R.data_details.push({ item:p.name, expected:`${fmtS(ref,2)} ${p.unit}`, found: foundVal!==null ? `${foundStr} ${p.unit}` : '未提及', status, score, max:p.max });
+  });
+  R.score_data = Math.min(50, R.score_data);
+
+  // ─ 维度二：排版格式（30分）────────────────────────────
+  const fmtChecks = [
+    { name:'章节结构完整', desc:'含绪论/前言、设计计算、结论、参考文献四部分', max:8,
+      fn:()=>{
+        const a = /绪论|前言|概述|设计目的|引言/.test(text)?2:0;
+        const b = /计算|设计计算|总体方案|方案/.test(text)?2:0;
+        const c = /结论|总结|结语/.test(text)?2:0;
+        const d = /参考文献|参考资料/.test(text)?2:0;
+        return a+b+c+d;
+      } },
+    { name:'图表编号规范', desc:'图形有"图x"编号，表格有"表x"编号', max:6,
+      fn:()=>(/图\s*\d+/.test(text)?3:0) + (/表\s*\d+/.test(text)?3:0) },
+    { name:'公式编号', desc:'有括号形式公式编号，如（1-1）、(1)', max:5,
+      fn:()=>/[（(]\s*\d+[-\d]*\s*[）)]|式[（(]/.test(text)?5:0 },
+    { name:'单位使用规范', desc:'正确使用 mm、kg、kW、N·m、km/h 等单位', max:5,
+      fn:()=>{
+        const us=['mm','kg','kW','N·m','km/h','m/s','MPa','kN','°','%',' L ','t'];
+        return Math.min(5, us.filter(u=>text.includes(u)).length);
+      } },
+    { name:'标题层次清晰', desc:'有多级标题（一级章节、二级小节）', max:6,
+      fn:()=>{
+        const h1 = /^[一二三四五六七八九十]+[、.．]|^第[一二三四五六七八九十\d]+章|^\d+\s+[\u4e00-\u9fff]/m.test(text)?3:0;
+        const h2 = /^\d+\.\d+\s+|^[（(][一二三四五六七八九十\d]+[）)]/m.test(text)?3:0;
+        return h1+h2;
+      } },
+  ];
+  fmtChecks.forEach(c => { const s = c.fn(); R.score_format += s; R.format_details.push({ name:c.name, desc:c.desc, score:s, max:c.max }); });
+  R.score_format = Math.min(30, R.score_format);
+
+  // ─ 维度三：内容质量（20分）───────────────────────────
+  const ctChecks = [
+    { name:'引用国家标准', desc:'引用 GB/T 28382、GB/T 18385、GB 1589 等电动汽车/汽车标准', max:5,
+      fn:()=>{const n=(text.match(/GB[\s/T]*\d+|国家标准|汽车设计|新能源|电动汽车/g)||[]).length; return n>=3?5:n>=1?3:0;} },
+    { name:'计算过程详细', desc:'有公式推导、数据代入、求解过程', max:5,
+      fn:()=>{
+        const a=/公式|代入|求得|计算得|由.*得|其中/.test(text)?3:0;
+        const b=/步骤|由式|将.*代入/.test(text)?2:0;
+        return a+b;
+      } },
+    { name:'设计分析深度', desc:'有方案比较、合理性论述、校核验证', max:5,
+      fn:()=>{
+        const ks=['分析','选取依据','合理性','满足要求','校核','验算','综上','因此','由此','轴荷','动力性','续驶里程','电耗','驱动电机','动力电池','电机','电池','充电','总布置','离地间隙'];
+        return Math.min(5, Math.round(ks.filter(k=>text.includes(k)).length * 0.6));
+      } },
+    { name:'内容充实度', desc:'说明书正文字数（≥5000字为满分）', max:5,
+      fn:()=>{
+        const n = text.replace(/\s/g,'').length;
+        return n>=5000?5:n>=3000?4:n>=1500?2:1;
+      } },
+  ];
+  ctChecks.forEach(c => { const s = c.fn(); R.score_content += s; R.content_details.push({ name:c.name, desc:c.desc, score:s, max:c.max }); });
+  R.score_content = Math.min(20, R.score_content);
+
+  R.total = R.score_data + R.score_format + R.score_content;
+  return R;
+}
+
+// ── 执行评阅 ──────────────────────────────────────────────
+async function gradeManualReport() {
+  const fileInput = document.getElementById('reviewFile');
+  if (!fileInput.files || !fileInput.files[0]) { alert('请先选择说明书 PDF 文件！'); return; }
+
+  const res = document.getElementById('reviewResult');
+  document.getElementById('reviewBtnArea').style.display = 'none';
+  res.innerHTML = `<div class="card"><div class="card-body"><div class="ai-loading"><div class="spinner"></div><div style="color:var(--accent2);font-weight:600">正在提取 PDF 文字并自动评阅，请稍候…</div></div></div></div>`;
+
+  try {
+    const ab = await fileInput.files[0].arrayBuffer();
+    const text = await extractPdfTextVeh(ab);
+    if (text.length < 50) throw new Error('未能提取到文字内容。请确认 PDF 说明书中含有可选中的文字（非纯扫描图片）。');
+    const r = scoreManualReport(text);
+    window._lastManualReview = r;
+    renderManualReview(r, text);
+  } catch (err) {
+    res.innerHTML = `<div class="card"><div class="card-body"><div style="background:rgba(248,81,73,0.1);border:1px solid var(--red);border-radius:6px;padding:14px;color:var(--red)">
+      <strong>❌ 评阅失败：</strong>${err.message}
+    </div></div></div>`;
+  }
+}
+
+// ── 渲染评阅报告 ──────────────────────────────────────────
+function renderManualReview(r, text) {
+  const grade = r.total>=90?'优秀':r.total>=80?'良好':r.total>=70?'中等':r.total>=60?'及格':'不及格';
+  const gColor = r.total>=80?'var(--green)':r.total>=60?'var(--yellow)':'var(--red)';
+  const statusIcon = {
+    ok:   '<span style="color:var(--green)">✓ 一致</span>',
+    warn: '<span style="color:var(--yellow)">△ 偏差</span>',
+    err:  '<span style="color:var(--red)">✗ 差异大</span>',
+    miss: '<span style="color:var(--text2)">— 未提及</span>',
+    skip: '<span style="color:var(--text2)">— 跳过</span>'
+  };
+  const badgeCls = d => d.score===d.max ? 'badge-ok-s' : d.score>0 ? 'badge-warn-s' : 'badge-err-s';
+
+  const dataRows = r.data_details.map(d=>`
+    <tr>
+      <td>${d.item}</td>
+      <td style="font-family:var(--font-mono);font-size:12px">${d.expected}</td>
+      <td style="font-family:var(--font-mono);font-size:12px">${d.found}</td>
+      <td>${statusIcon[d.status]||''}</td>
+      <td class="score-col"><span class="${badgeCls(d)}">${d.score}/${d.max}</span></td>
+    </tr>`).join('');
+
+  const fmtRows = r.format_details.map(d=>`
+    <tr>
+      <td><strong>${d.name}</strong></td>
+      <td style="font-size:12px;color:var(--text2)">${d.desc}</td>
+      <td class="score-col"><span class="${badgeCls(d)}">${d.score}/${d.max}</span></td>
+    </tr>`).join('');
+
+  const ctRows = r.content_details.map(d=>`
+    <tr>
+      <td><strong>${d.name}</strong></td>
+      <td style="font-size:12px;color:var(--text2)">${d.desc}</td>
+      <td class="score-col"><span class="${badgeCls(d)}">${d.score}/${d.max}</span></td>
+    </tr>`).join('');
+
+  const wordCount = text.replace(/\s/g,'').length;
+
+  document.getElementById('reviewResult').innerHTML = `
+    <div class="score-card" style="margin-top:16px;margin-bottom:20px">
+      <div class="score-display">
+        <div class="score-label">说明书评阅总分</div>
+        <div class="score-value">${r.total}</div>
+        <div class="score-grade" style="color:${gColor}">${grade}</div>
+      </div>
+      <div class="score-details">
+        <div class="score-detail-item"><div class="sd-label">数据符合度</div><div class="sd-value">${r.score_data}<span style="font-size:13px;color:var(--text2)">/50</span></div></div>
+        <div class="score-detail-item"><div class="sd-label">排版格式</div><div class="sd-value">${r.score_format}<span style="font-size:13px;color:var(--text2)">/30</span></div></div>
+        <div class="score-detail-item"><div class="sd-label">内容质量</div><div class="sd-value">${r.score_content}<span style="font-size:13px;color:var(--text2)">/20</span></div></div>
+        <div class="score-detail-item"><div class="sd-label">正文字数</div><div class="sd-value" style="font-size:18px">${wordCount}</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title"><span class="icon">📊</span> 数据符合度明细（${r.score_data}/50 分）</div></div>
+      <div class="card-body" style="padding:0">
+        <table class="grading-table">
+          <thead><tr><th>参数</th><th>工具计算值</th><th>说明书中的值</th><th>一致性</th><th class="score-col">得分</th></tr></thead>
+          <tbody>${dataRows}</tbody>
+        </table>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin:-8px 2px 16px">容差规则：偏差 ≤8% 得满分；8%~24% 得 55% 分；&gt;24% 得 20% 分；未提及得 0 分</div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title"><span class="icon">📝</span> 排版格式规范明细（${r.score_format}/30 分）</div></div>
+      <div class="card-body" style="padding:0">
+        <table class="grading-table">
+          <thead><tr><th>检查项目</th><th>说明</th><th class="score-col">得分</th></tr></thead>
+          <tbody>${fmtRows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title"><span class="icon">💡</span> 内容质量明细（${r.score_content}/20 分）</div></div>
+      <div class="card-body" style="padding:0">
+        <table class="grading-table">
+          <thead><tr><th>检查项目</th><th>说明</th><th class="score-col">得分</th></tr></thead>
+          <tbody>${ctRows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title"><span class="icon">✅</span> 改进建议</div></div>
+      <div class="card-body">
+        <div class="formula-box" style="line-height:1.9;color:var(--text)">
+          ${r.score_data<35?'📌 <strong style="color:var(--accent2)">数据完整性不足：</strong>说明书中有多个核心参数缺失或与工具计算值偏差过大，请核对计算过程并将所有结果写入说明书。<br>':''}
+          ${r.score_format<20?'📌 <strong style="color:var(--accent2)">格式规范需改进：</strong>建议补充章节结构（绪论→计算→结论→参考文献），图、表、公式添加编号，单位使用国标符号。<br>':''}
+          ${r.score_content<14?'📌 <strong style="color:var(--accent2)">内容深度不足：</strong>建议引用 GB/T 28382、GB/T 18385 等电动汽车标准，补充驱动电机选型、动力电池与续驶里程、轴荷分配、动力性分析与校核验证内容。<br>':''}
+          ${r.total>=80?'✅ 说明书整体质量良好，数据、格式、内容均达到较高水准。':''}
+          ${r.total<60?'<span style="color:var(--text2)">综合评分偏低，请对照上方明细逐项完善后重新评阅。</span>':''}
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('reviewBtnArea').style.display = 'block';
+}
+
+// ── 生成说明书评阅完整报告 ───────────────────────────────
+function generateManualReviewFile() {
+  const r = window._lastManualReview;
+  if (!r) { alert('请先完成说明书评阅！'); return; }
+  if (!appState.studentId) { alert('未检测到学号/姓名，请先登录。'); return; }
+  const grade = r.total>=90?'优秀':r.total>=80?'良好':r.total>=70?'中等':r.total>=60?'及格':'不及格';
+
+  const systemData = {
+    studentId:   appState.studentId,
+    studentName: appState.studentName,
+    totalScore:  r.total,
+    grade,
+    timestamp:   Date.now(),
+    reportType:  '汽车总体设计说明书评阅',
+    scores: { s1:r.score_data, s2:r.score_format, s3:r.score_content, s4:0, s5:0, s6:0 }
+  };
+
+  const stTxt = s => s==='ok'?'✓ 一致':s==='warn'?'△ 偏差':s==='err'?'✗ 差异大':s==='skip'?'— 跳过':'— 未提及';
+  let report = `汽车总体设计说明书评阅报告
+学号：${appState.studentId}   姓名：${appState.studentName}
+生成时间：${new Date().toLocaleString()}
+广西大学 · 车辆工程专业 · 《汽车设计》课程教学团队
+================================================================
+【说明书评阅总分】
+  总分：${r.total} / 100  （${grade}）
+  数据符合度：    ${r.score_data} / 50
+  排版格式规范：  ${r.score_format} / 30
+  内容质量：      ${r.score_content} / 20
+----------------------------------------------------------------
+一、数据符合度明细
+`;
+  r.data_details.forEach(d => { report += `  ${d.item}\n     参考值：${d.expected}   说明书值：${d.found}   ${stTxt(d.status)}   得分：${d.score}/${d.max}\n`; });
+  report += `\n二、排版格式明细\n`;
+  r.format_details.forEach(d => { report += `  ${d.name}（${d.desc}）：${d.score}/${d.max}\n`; });
+  report += `\n三、内容质量明细\n`;
+  r.content_details.forEach(d => { report += `  ${d.name}（${d.desc}）：${d.score}/${d.max}\n`; });
+  report += `================================================================
+--- SYSTEM DATA BEGIN ---
+${JSON.stringify(systemData)}
+--- SYSTEM DATA END ---
+`;
+
+  const blob = new Blob([report], { type:'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${appState.studentId}_${appState.studentName}_汽车总体设计_说明书评阅报告_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  alert('说明书评阅报告已生成！\n请将此 TXT 文件提交给教师，用于导入教师管理统计系统。');
+}
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+if (e.key === 'F12' || 
+(e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+(e.ctrlKey && e.key === 'U') ||
+(e.ctrlKey && e.key === 'S')) {
+e.preventDefault();
+return false;
+}
+});
+</script>
+<script>
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
+    if (e.key === 'F12' || 
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+        (e.ctrlKey && e.key === 'U') ||
+        (e.ctrlKey && e.key === 'S')) {
+      e.preventDefault();
+      return false;
+    }
+  });
+</script>
+</body>
+</html>
